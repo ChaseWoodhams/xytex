@@ -1,0 +1,82 @@
+import type { Metadata } from "next";
+import { Playfair_Display, DM_Sans } from "next/font/google";
+import { Header, Footer } from "@/components/layout";
+import { AuthProvider } from "@/components/auth/AuthProvider";
+import { MotionProvider } from "@/components/shared/MotionProvider";
+import { WebVitalsReporter } from "@/components/shared/WebVitalsReporter";
+import "./globals.css";
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
+
+export const metadata: Metadata = {
+  title: "Xytex | America's Longest-Running Sperm Bank Since 1975",
+  description:
+    "Xytex is America's most trusted sperm bank with 50 years of experience. Browse 200+ identity-disclosed donors with 569 genetic tests. LGBTQ+ friendly, at-home delivery available.",
+  keywords: [
+    "sperm bank",
+    "sperm donor",
+    "fertility",
+    "LGBTQ family building",
+    "single mother by choice",
+    "donor sperm",
+    "at-home insemination",
+    "identity disclosure",
+  ],
+  openGraph: {
+    title: "Xytex | America's Longest-Running Sperm Bank Since 1975",
+    description:
+      "50 years of helping families. Browse 200+ identity-disclosed donors with comprehensive genetic testing.",
+    type: "website",
+    locale: "en_US",
+    siteName: "Xytex",
+  },
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" className={`${playfair.variable} ${dmSans.variable}`}>
+      <head>
+        {/* Preconnect to external domains */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        
+        {/* DNS prefetch for Supabase */}
+        <link rel="dns-prefetch" href="https://supabase.co" />
+        
+        {/* Prefetch likely next pages */}
+        <link rel="prefetch" href="/browse-donors" />
+        <link rel="prefetch" href="/lgbtq-family-building" />
+      </head>
+      <body className="font-body antialiased">
+        <WebVitalsReporter />
+        <MotionProvider>
+          <AuthProvider>
+            {/* Skip to Content Link - Accessibility */}
+            <a href="#main-content" className="skip-to-content">
+              Skip to main content
+            </a>
+            <Header />
+            <main id="main-content" tabIndex={-1}>
+              {children}
+            </main>
+            <Footer />
+          </AuthProvider>
+        </MotionProvider>
+      </body>
+    </html>
+  );
+}
