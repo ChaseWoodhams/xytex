@@ -459,14 +459,14 @@ export default function LGBTQFamilyBuildingPage() {
                       </h4>
                       <p className="text-navy-700 text-sm leading-relaxed">
                         {option.description}
-                        {option.link && (
+                        {"link" in option && option.link && (
                           <>
                             {" "}
                             <Link
                               href={option.link}
                               className="text-gold-600 font-semibold hover:text-gold-700 transition-colors"
                             >
-                              {option.linkText} →
+                              {"linkText" in option && option.linkText} →
                             </Link>
                           </>
                         )}
