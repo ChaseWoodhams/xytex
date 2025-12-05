@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCorporateAccounts, createCorporateAccount } from '@/lib/supabase/corporate-accounts';
 import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
+import { AccountStatus } from '@/lib/supabase/types';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
@@ -21,9 +22,16 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
+    
+    // Validate status is a valid AccountStatus
+    const statusParam = searchParams.get('status');
+    const validStatuses: AccountStatus[] = ['active', 'inactive', 'archived'];
+    const status = statusParam && validStatuses.includes(statusParam as AccountStatus) 
+      ? (statusParam as AccountStatus) 
+      : undefined;
+    
     const filters = {
-      status: searchParams.get('status') || undefined,
-      deal_stage: searchParams.get('deal_stage') || undefined,
+      status,
       industry: searchParams.get('industry') || undefined,
       search: searchParams.get('search') || undefined,
     };

@@ -100,11 +100,6 @@ export default function AccountDetailView({
           >
             {account.status}
           </span>
-          {"deal_stage" in account && (account as CorporateAccount & { deal_stage: string }).deal_stage && (
-            <span className="text-sm text-navy-600 capitalize">
-              {(account as CorporateAccount & { deal_stage: string }).deal_stage.replace("_", " ")}
-            </span>
-          )}
         </div>
       </div>
 

@@ -1,9 +1,8 @@
 import { createAdminClient } from './admin';
-import type { CorporateAccount, DealStage, AccountStatus } from './types';
+import type { CorporateAccount, AccountStatus } from './types';
 
 export interface CorporateAccountFilters {
   status?: AccountStatus;
-  deal_stage?: DealStage;
   industry?: string;
   search?: string;
 }
@@ -16,10 +15,6 @@ export async function getCorporateAccounts(
 
   if (filters?.status) {
     query = query.eq('status', filters.status);
-  }
-
-  if (filters?.deal_stage) {
-    query = query.eq('deal_stage', filters.deal_stage);
   }
 
   if (filters?.industry) {
