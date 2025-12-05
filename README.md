@@ -2,6 +2,7 @@
 
 Modern e-commerce style website for Xytex sperm bank, built with Next.js 16, TypeScript, Tailwind CSS 4, and Supabase.
 
+
 ## Tech Stack
 
 - **Framework:** Next.js 16 (App Router)

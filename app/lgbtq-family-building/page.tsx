@@ -5,20 +5,15 @@ import { motion } from "framer-motion";
 import {
   ArrowRight,
   Heart,
-  Users,
   User,
-  Baby,
-  Shield,
   Camera,
   Dna,
   Clock,
   Scale,
-  Phone,
   Calendar,
   UserPlus,
   Search,
   Truck,
-  FileText,
   CheckCircle2,
   Warehouse,
   DollarSign,
@@ -416,7 +411,7 @@ export default function LGBTQFamilyBuildingPage() {
             <h2 className="text-navy-900 mb-4">Find Your Path</h2>
             <p className="text-lg text-navy-700 max-w-3xl mx-auto leading-relaxed">
               Every family-building journey is unique. Rather than tell you what
-              your path should look like, we're here to support the one you
+              your path should look like, we&apos;re here to support the one you
               choose. Explore the options below, or{" "}
               <Link
                 href="/contact"
@@ -532,7 +527,7 @@ export default function LGBTQFamilyBuildingPage() {
 
               <div className="mb-6">
                 <p className="text-navy-700 font-medium mb-3">
-                  <strong>What you'll need:</strong>
+                  <strong>What you&apos;ll need:</strong>
                 </p>
                 <ul className="space-y-2">
                   {pathways[1].whatYouNeed.map((item, idx) => (
@@ -752,8 +747,8 @@ export default function LGBTQFamilyBuildingPage() {
           >
             <h2 className="text-navy-900 mb-4">The Xytex Difference</h2>
             <p className="text-lg text-navy-700 max-w-3xl mx-auto leading-relaxed">
-              We've supported LGBTQ+ families since 1975—long before it was
-              common or easy. Here's why families continue to choose us.
+              We&apos;ve supported LGBTQ+ families since 1975—long before it was
+              common or easy. Here&apos;s why families continue to choose us.
             </p>
           </motion.div>
 
@@ -807,7 +802,7 @@ export default function LGBTQFamilyBuildingPage() {
                         <div className="mt-4 space-y-3">
                           <div>
                             <p className="text-navy-700 font-medium mb-2">
-                              <strong>What you won't hear from us:</strong>
+                              <strong>What you won&apos;t hear from us:</strong>
                             </p>
                             <ul className="space-y-1">
                               {diff.whatYouWontHear.map((item, idx) => (
@@ -862,7 +857,7 @@ export default function LGBTQFamilyBuildingPage() {
               <Scale className="w-12 h-12 text-gold-400 mx-auto mb-4" />
               <h2 className="text-white mb-4">Navigating the Legal Landscape</h2>
               <p className="text-navy-200 text-lg leading-relaxed max-w-3xl mx-auto">
-                LGBTQ+ family law varies dramatically by state—and it's evolving
+                LGBTQ+ family law varies dramatically by state—and it&apos;s evolving
                 constantly. Understanding your legal landscape is essential to
                 protecting your family.
               </p>
@@ -1106,7 +1101,7 @@ export default function LGBTQFamilyBuildingPage() {
                     {futurePlanning[1].title}
                   </h3>
                   <p className="text-navy-700 font-medium mb-4">
-                    <strong>Transparent pricing matters.</strong> Here's what to
+                    <strong>Transparent pricing matters.</strong> Here&apos;s what to
                     budget for:
                   </p>
                 </div>
@@ -1180,7 +1175,7 @@ export default function LGBTQFamilyBuildingPage() {
           >
             <h2 className="text-navy-900 mb-4">Families Share Their Journeys</h2>
             <p className="text-lg text-navy-700 max-w-3xl mx-auto leading-relaxed">
-              Every family's path is different. Here's how some LGBTQ+ families
+              Every family&apos;s path is different. Here&apos;s how some LGBTQ+ families
               describe their experience with Xytex.
             </p>
           </motion.div>
@@ -1330,9 +1325,9 @@ export default function LGBTQFamilyBuildingPage() {
               Ready to Take the Next Step?
             </h2>
             <p className="text-xl text-navy-100 mb-10 leading-relaxed">
-              You don't have to have everything figured out. Start by browsing
-              donors, asking questions, or just learning more. We're here
-              whenever you're ready.
+              You don&apos;t have to have everything figured out. Start by browsing
+              donors, asking questions, or just learning more. We&apos;re here
+              whenever you&apos;re ready.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
               <Link
