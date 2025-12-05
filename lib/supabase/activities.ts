@@ -1,5 +1,5 @@
 import { createAdminClient } from './admin';
-import type { Activity, ActivityType } from './types';
+import type { Activity, ActivityType, Database } from './types';
 
 export async function getActivitiesByAccount(accountId: string): Promise<Activity[]> {
   try {
@@ -51,7 +51,7 @@ export async function createActivity(
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('activities')
-    .insert(activityData)
+    .insert(activityData as Database['public']['Tables']['activities']['Insert'])
     .select()
     .single();
 
