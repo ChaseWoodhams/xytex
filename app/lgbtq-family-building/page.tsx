@@ -440,10 +440,10 @@ export default function LGBTQFamilyBuildingPage() {
             >
               <div className="mb-6">
                 <h3 className="text-2xl font-heading font-semibold text-navy-900 mb-2">
-                  {pathways[0].title}
+                  {pathways[0]?.title}
                 </h3>
                 <p className="text-navy-700 font-medium">
-                  <strong>For:</strong> {pathways[0].for}
+                  <strong>For:</strong> {pathways[0]?.for}
                 </p>
               </div>
 
@@ -452,7 +452,7 @@ export default function LGBTQFamilyBuildingPage() {
                   <strong>Your options include:</strong>
                 </p>
                 <div className="space-y-4">
-                  {pathways[0].options.map((option, idx) => (
+                  {pathways[0]?.options?.map((option, idx) => (
                     <div key={idx} className="pl-4 border-l-2 border-gold-400">
                       <h4 className="font-semibold text-navy-900 mb-1">
                         {option.title}
@@ -478,12 +478,12 @@ export default function LGBTQFamilyBuildingPage() {
 
               <div className="bg-white/50 rounded-lg p-4 mb-6">
                 <p className="text-navy-700 text-sm leading-relaxed">
-                  {pathways[0].planningNote}
+                  {pathways[0]?.planningNote}
                 </p>
               </div>
 
               <div className="flex flex-wrap gap-3">
-                {pathways[0].ctas.map((cta, idx) => (
+                {pathways[0]?.ctas?.map((cta, idx) => (
                   <Link
                     key={idx}
                     href={cta.href}
