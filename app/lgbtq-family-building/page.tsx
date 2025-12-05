@@ -146,7 +146,7 @@ const pathways = [
       "You don't need a partner to become a parent. Single parents by choice are one of our fastest-growing family types, and we support you fully.",
     cta: { text: "Visit our Single Parents page", href: "/single-mother-by-choice" },
   },
-];
+] as const;
 
 const differentiators = [
   {
@@ -281,7 +281,7 @@ const futurePlanning = [
     note: "Not included: Fertility clinic fees, IVF costs, surrogacy costs (if applicable)",
     financing: "Financing available through our partnership with CapexMD.",
   },
-];
+] as const;
 
 const testimonials = [
   {
