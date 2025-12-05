@@ -1,5 +1,5 @@
 import { createAdminClient } from './admin';
-import type { Activity, ActivityType } from './types';
+import type { Activity, ActivityType, Database } from './types';
 
 export async function getActivitiesByAccount(accountId: string): Promise<Activity[]> {
   try {
@@ -46,7 +46,7 @@ export async function getActivitiesByLocation(locationId: string): Promise<Activ
 }
 
 export async function createActivity(
-  activityData: Omit<Activity, 'id' | 'created_at' | 'updated_at'>
+  activityData: Database['public']['Tables']['activities']['Insert']
 ): Promise<Activity | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
