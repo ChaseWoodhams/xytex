@@ -1,9 +1,6 @@
 import { getAllDonors, getFeaturedDonors } from '@/lib/supabase/donors';
 import { NextResponse } from 'next/server';
 
-// Revalidate every hour (3600 seconds)
-export const revalidate = 3600;
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -17,15 +14,7 @@ export async function GET(request: Request) {
       donors = await getAllDonors();
     }
 
-    const response = NextResponse.json({ donors });
-    
-    // Add caching headers
-    response.headers.set(
-      'Cache-Control',
-      'public, s-maxage=3600, stale-while-revalidate=86400'
-    );
-
-    return response;
+    return NextResponse.json({ donors });
   } catch (error) {
     console.error('Error fetching donors:', error);
     return NextResponse.json(

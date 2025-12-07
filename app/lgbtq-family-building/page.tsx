@@ -5,15 +5,20 @@ import { motion } from "framer-motion";
 import {
   ArrowRight,
   Heart,
+  Users,
   User,
+  Baby,
+  Shield,
   Camera,
   Dna,
   Clock,
   Scale,
+  Phone,
   Calendar,
   UserPlus,
   Search,
   Truck,
+  FileText,
   CheckCircle2,
   Warehouse,
   DollarSign,
@@ -46,7 +51,7 @@ const pathways = [
       },
     ],
     planningNote:
-      "Planning together? If you have a partner who isn't carrying, you can browse donors together, discuss traits that matter to both of you, and make this decision as a teamotion. Our 7-day free profile access gives you time to explore without pressure.",
+      "Planning together? If you have a partner who isn't carrying, you can browse donors together, discuss traits that matter to both of you, and make this decision as a team. Our 7-day free profile access gives you time to explore without pressure.",
     ctas: [
       { text: "Browse Donors", href: "/browse-donors" },
       { text: "At-Home Insemination Guide", href: "/at-home-insemination" },
@@ -95,7 +100,7 @@ const pathways = [
       },
     ],
     whatXytexProvides:
-      "We supply the donor spermotion. You'll work with a surrogacy agency or independent surrogate, plus a fertility clinic to coordinate the process.",
+      "We supply the donor sperm. You'll work with a surrogacy agency or independent surrogate, plus a fertility clinic to coordinate the process.",
     keyConsiderations: [
       "Surrogacy laws vary significantly by state",
       "Costs typically range from $100,000-$200,000+ total",
@@ -141,7 +146,7 @@ const pathways = [
       "You don't need a partner to become a parent. Single parents by choice are one of our fastest-growing family types, and we support you fully.",
     cta: { text: "Visit our Single Parents page", href: "/single-mother-by-choice" },
   },
-] as const;
+];
 
 const differentiators = [
   {
@@ -276,7 +281,7 @@ const futurePlanning = [
     note: "Not included: Fertility clinic fees, IVF costs, surrogacy costs (if applicable)",
     financing: "Financing available through our partnership with CapexMD.",
   },
-] as const;
+];
 
 const testimonials = [
   {
@@ -302,7 +307,7 @@ const testimonials = [
   },
   {
     quote:
-      "I'm a single queer woman who always knew I wanted to be a momotion. Xytex never made me feel like I needed a partner to deserve good service. They treated my family-building goals with the same respect as anyone else's.",
+      "I'm a single queer woman who always knew I wanted to be a mom. Xytex never made me feel like I needed a partner to deserve good service. They treated my family-building goals with the same respect as anyone else's.",
     author: "Riley",
     location: "Denver, CO",
     type: "Single parent by choice",
@@ -411,7 +416,7 @@ export default function LGBTQFamilyBuildingPage() {
             <h2 className="text-navy-900 mb-4">Find Your Path</h2>
             <p className="text-lg text-navy-700 max-w-3xl mx-auto leading-relaxed">
               Every family-building journey is unique. Rather than tell you what
-              your path should look like, we&apos;re here to support the one you
+              your path should look like, we're here to support the one you
               choose. Explore the options below, or{" "}
               <Link
                 href="/contact"
@@ -435,10 +440,10 @@ export default function LGBTQFamilyBuildingPage() {
             >
               <div className="mb-6">
                 <h3 className="text-2xl font-heading font-semibold text-navy-900 mb-2">
-                  {pathways[0]?.title}
+                  {pathways[0].title}
                 </h3>
                 <p className="text-navy-700 font-medium">
-                  <strong>For:</strong> {pathways[0]?.for}
+                  <strong>For:</strong> {pathways[0].for}
                 </p>
               </div>
 
@@ -447,21 +452,21 @@ export default function LGBTQFamilyBuildingPage() {
                   <strong>Your options include:</strong>
                 </p>
                 <div className="space-y-4">
-                  {pathways[0]?.options?.map((option, idx) => (
+                  {pathways[0].options.map((option, idx) => (
                     <div key={idx} className="pl-4 border-l-2 border-gold-400">
                       <h4 className="font-semibold text-navy-900 mb-1">
                         {option.title}
                       </h4>
                       <p className="text-navy-700 text-sm leading-relaxed">
                         {option.description}
-                        {"link" in option && option.link && (
+                        {option.link && (
                           <>
                             {" "}
                             <Link
                               href={option.link}
                               className="text-gold-600 font-semibold hover:text-gold-700 transition-colors"
                             >
-                              {"linkText" in option && option.linkText} →
+                              {option.linkText} →
                             </Link>
                           </>
                         )}
@@ -473,12 +478,12 @@ export default function LGBTQFamilyBuildingPage() {
 
               <div className="bg-white/50 rounded-lg p-4 mb-6">
                 <p className="text-navy-700 text-sm leading-relaxed">
-                  {pathways[0]?.planningNote}
+                  {pathways[0].planningNote}
                 </p>
               </div>
 
               <div className="flex flex-wrap gap-3">
-                {pathways[0]?.ctas?.map((cta, idx) => (
+                {pathways[0].ctas.map((cta, idx) => (
                   <Link
                     key={idx}
                     href={cta.href}
@@ -527,7 +532,7 @@ export default function LGBTQFamilyBuildingPage() {
 
               <div className="mb-6">
                 <p className="text-navy-700 font-medium mb-3">
-                  <strong>What you&apos;ll need:</strong>
+                  <strong>What you'll need:</strong>
                 </p>
                 <ul className="space-y-2">
                   {pathways[1].whatYouNeed.map((item, idx) => (
@@ -747,8 +752,8 @@ export default function LGBTQFamilyBuildingPage() {
           >
             <h2 className="text-navy-900 mb-4">The Xytex Difference</h2>
             <p className="text-lg text-navy-700 max-w-3xl mx-auto leading-relaxed">
-              We&apos;ve supported LGBTQ+ families since 1975—long before it was
-              common or easy. Here&apos;s why families continue to choose us.
+              We've supported LGBTQ+ families since 1975—long before it was
+              common or easy. Here's why families continue to choose us.
             </p>
           </motion.div>
 
@@ -802,7 +807,7 @@ export default function LGBTQFamilyBuildingPage() {
                         <div className="mt-4 space-y-3">
                           <div>
                             <p className="text-navy-700 font-medium mb-2">
-                              <strong>What you won&apos;t hear from us:</strong>
+                              <strong>What you won't hear from us:</strong>
                             </p>
                             <ul className="space-y-1">
                               {diff.whatYouWontHear.map((item, idx) => (
@@ -857,7 +862,7 @@ export default function LGBTQFamilyBuildingPage() {
               <Scale className="w-12 h-12 text-gold-400 mx-auto mb-4" />
               <h2 className="text-white mb-4">Navigating the Legal Landscape</h2>
               <p className="text-navy-200 text-lg leading-relaxed max-w-3xl mx-auto">
-                LGBTQ+ family law varies dramatically by state—and it&apos;s evolving
+                LGBTQ+ family law varies dramatically by state—and it's evolving
                 constantly. Understanding your legal landscape is essential to
                 protecting your family.
               </p>
@@ -1101,7 +1106,7 @@ export default function LGBTQFamilyBuildingPage() {
                     {futurePlanning[1].title}
                   </h3>
                   <p className="text-navy-700 font-medium mb-4">
-                    <strong>Transparent pricing matters.</strong> Here&apos;s what to
+                    <strong>Transparent pricing matters.</strong> Here's what to
                     budget for:
                   </p>
                 </div>
@@ -1175,7 +1180,7 @@ export default function LGBTQFamilyBuildingPage() {
           >
             <h2 className="text-navy-900 mb-4">Families Share Their Journeys</h2>
             <p className="text-lg text-navy-700 max-w-3xl mx-auto leading-relaxed">
-              Every family&apos;s path is different. Here&apos;s how some LGBTQ+ families
+              Every family's path is different. Here's how some LGBTQ+ families
               describe their experience with Xytex.
             </p>
           </motion.div>
@@ -1325,9 +1330,9 @@ export default function LGBTQFamilyBuildingPage() {
               Ready to Take the Next Step?
             </h2>
             <p className="text-xl text-navy-100 mb-10 leading-relaxed">
-              You don&apos;t have to have everything figured out. Start by browsing
-              donors, asking questions, or just learning more. We&apos;re here
-              whenever you&apos;re ready.
+              You don't have to have everything figured out. Start by browsing
+              donors, asking questions, or just learning more. We're here
+              whenever you're ready.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
               <Link

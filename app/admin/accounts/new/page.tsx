@@ -13,7 +13,7 @@ export default async function NewAccountPage() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-8">
       <h1 className="text-4xl font-heading font-bold text-navy-900 mb-8">
         Create New Account
       </h1>

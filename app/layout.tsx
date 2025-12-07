@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Playfair_Display, DM_Sans } from "next/font/google";
 import { Header, Footer } from "@/components/layout";
 import { AuthProvider } from "@/components/auth/AuthProvider";
-import { MotionProvider } from "@/components/shared/MotionProvider";
-import { WebVitalsReporter } from "@/components/shared/WebVitalsReporter";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -49,33 +47,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${playfair.variable} ${dmSans.variable}`}>
-      <head>
-        {/* Preconnect to external domains */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        
-        {/* DNS prefetch for Supabase */}
-        <link rel="dns-prefetch" href="https://supabase.co" />
-        
-        {/* Prefetch likely next pages */}
-        <link rel="prefetch" href="/browse-donors" />
-        <link rel="prefetch" href="/lgbtq-family-building" />
-      </head>
       <body className="font-body antialiased">
-        <WebVitalsReporter />
-        <MotionProvider>
-          <AuthProvider>
-            {/* Skip to Content Link - Accessibility */}
-            <a href="#main-content" className="skip-to-content">
-              Skip to main content
-            </a>
-            <Header />
-            <main id="main-content" tabIndex={-1}>
-              {children}
-            </main>
-            <Footer />
-          </AuthProvider>
-        </MotionProvider>
+        <AuthProvider>
+          {/* Skip to Content Link - Accessibility */}
+          <a href="#main-content" className="skip-to-content">
+            Skip to main content
+          </a>
+          <Header />
+          <main id="main-content" tabIndex={-1}>
+            {children}
+          </main>
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

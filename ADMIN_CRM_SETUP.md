@@ -14,39 +14,21 @@ The Business Development CRM has been successfully implemented with database sch
 ✅ API routes implemented
 ✅ Admin UI components created
 ✅ Role-based access control implemented
-✅ Storage bucket created (`agreements`)
-✅ Storage policies configured (upload, read, delete)
 
 ## Manual Setup Required
 
-### 1. Create Supabase Storage Bucket ✅ COMPLETED
+### 1. Create Supabase Storage Bucket
 
-The `agreements` storage bucket has been created via SQL. You can also create it manually:
-
-**Option A: Via SQL (Recommended)**
-```sql
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('agreements', 'agreements', false)
-ON CONFLICT (id) DO NOTHING;
-```
-
-**Option B: Via Dashboard**
 1. Go to your Supabase project dashboard
 2. Navigate to **Storage** → **Buckets**
 3. Click **New bucket**
 4. Name: `agreements`
-5. Set as **Private bucket** (recommended for sensitive documents)
+5. Set as **Public bucket** (or configure policies as needed)
 6. Click **Create bucket**
 
-### 2. Configure Storage Bucket Policies ✅ COMPLETED
+### 2. Configure Storage Bucket Policies
 
-Storage policies have been created via SQL. The following policies are now active:
-
-- ✅ **Upload Policy**: BD team and admins can upload agreement documents
-- ✅ **Read Policy**: BD team and admins can read agreement documents  
-- ✅ **Delete Policy**: BD team and admins can delete agreement documents
-
-If you need to recreate them manually, use this SQL:
+After creating the bucket, set up policies:
 
 ```sql
 -- Allow authenticated users with bd_team or admin role to upload

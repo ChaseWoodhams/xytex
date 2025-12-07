@@ -57,7 +57,7 @@ export default function NotesSection({ accountId, notes, currentUserId }: NotesS
                 </div>
                 <div className="flex items-center gap-2 ml-4">
                   {note.is_private && (
-                    <Lock className="w-4 h-4 text-navy-400" aria-label="Private note" />
+                    <Lock className="w-4 h-4 text-navy-400" title="Private note" />
                   )}
                   {note.created_by === currentUserId && (
                     <>

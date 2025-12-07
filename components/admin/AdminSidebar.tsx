@@ -16,11 +16,10 @@ export default function AdminSidebar() {
   };
 
   return (
-    <aside className="w-64 bg-navy-900 text-white min-h-screen fixed left-0 top-0 z-50 flex flex-col shadow-xl">
-      {/* Logo and Navigation */}
-      <div className="p-6 flex-1 overflow-y-auto">
-        <Link href="/admin" className="flex items-center gap-2 mb-8 hover:opacity-90 transition-opacity">
-          <Building2 className="w-6 h-6 text-gold-500" />
+    <aside className="w-64 bg-navy-900 text-white min-h-screen fixed left-0 top-0">
+      <div className="p-6">
+        <Link href="/admin" className="flex items-center gap-2 mb-8">
+          <Building2 className="w-6 h-6" />
           <span className="text-xl font-heading font-bold">Xytex CRM</span>
         </Link>
         <nav className="space-y-2">
@@ -28,8 +27,8 @@ export default function AdminSidebar() {
             href="/admin"
             className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
               pathname === "/admin"
-                ? "bg-gold-600 text-white shadow-md"
-                : "hover:bg-navy-800 text-white"
+                ? "bg-gold-600 text-white"
+                : "hover:bg-navy-800"
             }`}
           >
             <LayoutDashboard className="w-5 h-5" />
@@ -39,8 +38,8 @@ export default function AdminSidebar() {
             href="/admin/accounts"
             className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
               pathname?.startsWith("/admin/accounts")
-                ? "bg-gold-600 text-white shadow-md"
-                : "hover:bg-navy-800 text-white"
+                ? "bg-gold-600 text-white"
+                : "hover:bg-navy-800"
             }`}
           >
             <Building2 className="w-5 h-5" />
@@ -48,19 +47,17 @@ export default function AdminSidebar() {
           </Link>
         </nav>
       </div>
-      
-      {/* User Actions - Fixed at bottom */}
-      <div className="p-6 border-t border-navy-800 bg-navy-900 flex-shrink-0">
+      <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-navy-800">
         <Link
           href="/account"
-          className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-navy-800 transition-colors mb-2 text-white"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-navy-800 transition-colors mb-2"
         >
           <User className="w-5 h-5" />
           <span>My Account</span>
         </Link>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-navy-800 transition-colors w-full text-left text-white"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-navy-800 transition-colors w-full text-left"
         >
           <LogOut className="w-5 h-5" />
           <span>Sign Out</span>

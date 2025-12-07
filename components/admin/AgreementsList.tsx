@@ -1,73 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import type { Agreement } from "@/lib/supabase/types";
-import { FileText, Plus, Download, Edit, Trash2, Search } from "lucide-react";
+import { FileText, Plus, Download, Edit, Trash2 } from "lucide-react";
 
 interface AgreementsListProps {
   accountId: string;
   agreements: Agreement[];
-  locationFilterId?: string | null;
 }
 
-export default function AgreementsList({ accountId, agreements, locationFilterId }: AgreementsListProps) {
+export default function AgreementsList({ accountId, agreements }: AgreementsListProps) {
   const [showForm, setShowForm] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const filteredAgreements = useMemo(() => {
-    let base = agreements;
-
-    // Optional filter: show only agreements for a specific location
-    if (locationFilterId) {
-      base = base.filter((agreement) => agreement.location_id === locationFilterId);
-    }
-
-    if (!searchQuery.trim()) {
-      return base;
-    }
-
-    const query = searchQuery.toLowerCase();
-    return base.filter((agreement) => {
-      // Search in title
-      if (agreement.title?.toLowerCase().includes(query)) return true;
-      
-      // Search in agreement type
-      if (agreement.agreement_type?.toLowerCase().includes(query)) return true;
-      
-      // Search in status
-      if (agreement.status?.toLowerCase().includes(query)) return true;
-      
-      // Search in terms
-      if (agreement.terms?.toLowerCase().includes(query)) return true;
-      
-      // Search in notes
-      if (agreement.notes?.toLowerCase().includes(query)) return true;
-      
-      // Search in formatted dates
-      if (agreement.start_date) {
-        const startDate = new Date(agreement.start_date).toLocaleDateString().toLowerCase();
-        if (startDate.includes(query)) return true;
-      }
-      
-      if (agreement.end_date) {
-        const endDate = new Date(agreement.end_date).toLocaleDateString().toLowerCase();
-        if (endDate.includes(query)) return true;
-      }
-      
-      // Search in revenue share percentage (as string)
-      if (agreement.revenue_share_percentage !== null) {
-        if (agreement.revenue_share_percentage.toString().includes(query)) return true;
-      }
-      
-      // Search in monthly fee (as string)
-      if (agreement.monthly_fee !== null) {
-        if (agreement.monthly_fee.toString().includes(query)) return true;
-      }
-      
-      return false;
-    });
-  }, [agreements, searchQuery, locationFilterId]);
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6">
@@ -84,27 +27,6 @@ export default function AgreementsList({ accountId, agreements, locationFilterId
         </button>
       </div>
 
-      {/* Search Bar */}
-      {agreements.length > 0 && (
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-navy-400" />
-            <input
-              type="text"
-              placeholder="Search agreements by title, type, status, terms, dates, etc..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-navy-200 rounded-lg focus:ring-2 focus:ring-gold-500 focus:border-gold-500 outline-none"
-            />
-          </div>
-          {searchQuery && (
-            <p className="mt-2 text-sm text-navy-600">
-              Showing {filteredAgreements.length} of {agreements.length} agreement{agreements.length !== 1 ? 's' : ''}
-            </p>
-          )}
-        </div>
-      )}
-
       {agreements.length === 0 ? (
         <div className="text-center py-12">
           <FileText className="w-16 h-16 text-navy-300 mx-auto mb-4" />
@@ -113,24 +35,12 @@ export default function AgreementsList({ accountId, agreements, locationFilterId
             Create First Agreement
           </button>
         </div>
-      ) : filteredAgreements.length === 0 ? (
-        <div className="text-center py-12">
-          <FileText className="w-16 h-16 text-navy-300 mx-auto mb-4" />
-          <p className="text-navy-600 mb-2">No agreements match your search</p>
-          <button
-            onClick={() => setSearchQuery("")}
-            className="text-gold-600 hover:text-gold-700 font-medium text-sm"
-          >
-            Clear search
-          </button>
-        </div>
       ) : (
         <div className="space-y-4">
-          {filteredAgreements.map((agreement) => (
-            <Link
+          {agreements.map((agreement) => (
+            <div
               key={agreement.id}
-              href={`/admin/agreements/${agreement.id}`}
-              className="block border border-navy-200 rounded-lg p-4 hover:shadow-md transition-shadow hover:border-gold-300"
+              className="border border-navy-200 rounded-lg p-4 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -199,10 +109,15 @@ export default function AgreementsList({ accountId, agreements, locationFilterId
                       <Download className="w-4 h-4" />
                     </a>
                   )}
-                  {/* Edit/Delete will be implemented on the detail page */}
+                  <button className="p-2 text-navy-600 hover:text-gold-600 hover:bg-gold-50 rounded-lg transition-colors">
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button className="p-2 text-navy-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}

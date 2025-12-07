@@ -74,7 +74,7 @@ const timeline = [
     month: "Month 3+",
     title: "Insemination Cycles",
     description:
-      "Begin your insemination journey. Most women try 3-6 cycles. Track ovulation and stay connected with your care teamotion.",
+      "Begin your insemination journey. Most women try 3-6 cycles. Track ovulation and stay connected with your care team.",
     icon: Heart,
   },
   {

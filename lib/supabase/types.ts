@@ -59,6 +59,7 @@ export interface DonorView {
 }
 
 // CRM Types
+export type DealStage = 'prospect' | 'qualified' | 'negotiation' | 'closed_won' | 'closed_lost';
 export type AccountStatus = 'active' | 'inactive' | 'archived';
 export type LocationStatus = 'active' | 'inactive';
 export type AgreementType = 'partnership' | 'vendor' | 'referral' | 'other';
@@ -67,10 +68,10 @@ export type ActivityType = 'call' | 'email' | 'meeting' | 'note' | 'task' | 'oth
 
 export interface CorporateAccount {
   id: string;
-  code: string | null;
   name: string;
   website: string | null;
   industry: string | null;
+  deal_stage: DealStage;
   annual_revenue: number | null;
   employee_count: number | null;
   status: AccountStatus;
@@ -85,7 +86,6 @@ export interface CorporateAccount {
 
 export interface Location {
   id: string;
-  code: string | null;
   corporate_account_id: string;
   name: string;
   address_line1: string | null;

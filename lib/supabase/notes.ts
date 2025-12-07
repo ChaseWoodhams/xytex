@@ -2,68 +2,55 @@ import { createAdminClient } from './admin';
 import type { Note } from './types';
 
 export async function getNotesByAccount(accountId: string, userId?: string): Promise<Note[]> {
-  try {
-    const supabase = createAdminClient();
-    
-    // Get only account-level notes (location_id is null)
-    const { data, error } = await supabase
-      .from('notes')
-      .select('*')
-      .eq('corporate_account_id', accountId)
-      .is('location_id', null)
-      .order('created_at', { ascending: false });
+  const supabase = createAdminClient();
+  let query = supabase
+    .from('notes')
+    .select('*')
+    .eq('corporate_account_id', accountId);
 
-    if (error) {
-      console.error('Error fetching notes:', JSON.stringify(error, null, 2));
-      return [];
-    }
-
-    if (!data) {
-      return [];
-    }
-
-    // Filter private notes on the client side if userId is provided
-    if (userId) {
-      return data.filter(note => !note.is_private || note.created_by === userId);
-    } else {
-      return data.filter(note => !note.is_private);
-    }
-  } catch (err) {
-    console.error('Unexpected error fetching notes:', err);
-    return [];
+  // Filter out private notes that don't belong to the user
+  if (userId) {
+    query = query.or(`is_private.eq.false,is_private.eq.true.and.created_by.eq.${userId}`);
+  } else {
+    query = query.eq('is_private', false);
   }
+
+  query = query.order('created_at', { ascending: false });
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching notes:', error);
+    throw error;
+  }
+
+  return data || [];
 }
 
 export async function getNotesByLocation(locationId: string, userId?: string): Promise<Note[]> {
-  try {
-    const supabase = createAdminClient();
-    
-    // First, get all notes for the location
-    const { data, error } = await supabase
-      .from('notes')
-      .select('*')
-      .eq('location_id', locationId)
-      .order('created_at', { ascending: false });
+  const supabase = createAdminClient();
+  let query = supabase
+    .from('notes')
+    .select('*')
+    .eq('location_id', locationId);
 
-    if (error) {
-      console.error('Error fetching notes by location:', JSON.stringify(error, null, 2));
-      return [];
-    }
-
-    if (!data) {
-      return [];
-    }
-
-    // Filter private notes on the client side if userId is provided
-    if (userId) {
-      return data.filter(note => !note.is_private || note.created_by === userId);
-    } else {
-      return data.filter(note => !note.is_private);
-    }
-  } catch (err) {
-    console.error('Unexpected error fetching notes by location:', err);
-    return [];
+  // Filter out private notes that don't belong to the user
+  if (userId) {
+    query = query.or(`is_private.eq.false,is_private.eq.true.and.created_by.eq.${userId}`);
+  } else {
+    query = query.eq('is_private', false);
   }
+
+  query = query.order('created_at', { ascending: false });
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching notes:', error);
+    throw error;
+  }
+
+  return data || [];
 }
 
 export async function createNote(

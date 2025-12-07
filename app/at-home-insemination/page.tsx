@@ -56,7 +56,7 @@ const vialTypes = [
     name: "Intrauterine Insemination",
     status: "Can Be Used at Home",
     description:
-      "Washed and concentrated spermotion. Designed for clinical use but can be used at home with a soft cup method.",
+      "Washed and concentrated sperm. Designed for clinical use but can be used at home with a soft cup method.",
     price: "$995",
     homeUse: true,
     highlight: false,
@@ -215,7 +215,7 @@ export default function AtHomeInseminationPage() {
         eyebrow="At-Home Insemination"
         title="At-Home Insemination:"
         titleHighlight="Privacy, Comfort, Flexibility"
-        description="Everything you need to know about at-home insemination with donor spermotion. A private, comfortable option for many on their path to parenthood."
+        description="Everything you need to know about at-home insemination with donor sperm. A private, comfortable option for many on their path to parenthood."
         primaryCTA={{ text: "Order for Home Delivery", href: "/browse-donors" }}
         secondaryCTA={{ text: "Questions? Call Us", href: "tel:1-800-277-3210" }}
         trustItems={["7-Day Tank Hold", "50% Buyback", "Free Support"]}

@@ -1,89 +1,21 @@
 import { createAdminClient } from './admin';
 import type { Location, LocationStatus } from './types';
 
-/**
- * Get location counts for multiple accounts at once
- */
-/**
- * Get all locations (both corporate and standalone)
- */
-export async function getAllLocations(): Promise<Location[]> {
-  try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from('locations')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching all locations:', JSON.stringify(error, null, 2));
-      return [];
-    }
-
-    return data || [];
-  } catch (err) {
-    console.error('Unexpected error fetching all locations:', err);
-    return [];
-  }
-}
-
-export async function getLocationCountsByAccounts(accountIds: string[]): Promise<Record<string, number>> {
-  if (accountIds.length === 0) {
-    return {};
-  }
-
-  try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from('locations')
-      .select('corporate_account_id')
-      .in('corporate_account_id', accountIds);
-
-    if (error) {
-      console.error('Error fetching location counts:', JSON.stringify(error, null, 2));
-      return {};
-    }
-
-    // Count locations per account
-    const counts: Record<string, number> = {};
-    accountIds.forEach(id => {
-      counts[id] = 0;
-    });
-
-    if (data) {
-      data.forEach((location) => {
-        const accountId = location.corporate_account_id;
-        counts[accountId] = (counts[accountId] || 0) + 1;
-      });
-    }
-
-    return counts;
-  } catch (err) {
-    console.error('Unexpected error fetching location counts:', err);
-    return {};
-  }
-}
-
 export async function getLocationsByAccount(accountId: string): Promise<Location[]> {
-  try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from('locations')
-      .select('*')
-      .eq('corporate_account_id', accountId)
-      .order('is_primary', { ascending: false })
-      .order('created_at', { ascending: false });
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('locations')
+    .select('*')
+    .eq('corporate_account_id', accountId)
+    .order('is_primary', { ascending: false })
+    .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching locations:', JSON.stringify(error, null, 2));
-      return [];
-    }
-
-    return data || [];
-  } catch (err) {
-    console.error('Unexpected error fetching locations:', err);
-    return [];
+  if (error) {
+    console.error('Error fetching locations:', error);
+    throw error;
   }
+
+  return data || [];
 }
 
 export async function getLocationById(id: string): Promise<Location | null> {

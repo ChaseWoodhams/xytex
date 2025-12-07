@@ -1,48 +1,36 @@
 import { createAdminClient } from './admin';
-import type { Activity, ActivityType, Database } from './types';
+import type { Activity, ActivityType } from './types';
 
 export async function getActivitiesByAccount(accountId: string): Promise<Activity[]> {
-  try {
-    const supabase = createAdminClient();
-    // Get only account-level activities (location_id is null)
-    const { data, error } = await supabase
-      .from('activities')
-      .select('*')
-      .eq('corporate_account_id', accountId)
-      .is('location_id', null)
-      .order('activity_date', { ascending: false });
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('activities')
+    .select('*')
+    .eq('corporate_account_id', accountId)
+    .order('activity_date', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching activities:', JSON.stringify(error, null, 2));
-      return [];
-    }
-
-    return data || [];
-  } catch (err) {
-    console.error('Unexpected error fetching activities:', err);
-    return [];
+  if (error) {
+    console.error('Error fetching activities:', error);
+    throw error;
   }
+
+  return data || [];
 }
 
 export async function getActivitiesByLocation(locationId: string): Promise<Activity[]> {
-  try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from('activities')
-      .select('*')
-      .eq('location_id', locationId)
-      .order('activity_date', { ascending: false });
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('activities')
+    .select('*')
+    .eq('location_id', locationId)
+    .order('activity_date', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching activities by location:', JSON.stringify(error, null, 2));
-      return [];
-    }
-
-    return data || [];
-  } catch (err) {
-    console.error('Unexpected error fetching activities by location:', err);
-    return [];
+  if (error) {
+    console.error('Error fetching activities:', error);
+    throw error;
   }
+
+  return data || [];
 }
 
 export async function createActivity(
@@ -51,7 +39,7 @@ export async function createActivity(
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('activities')
-    .insert(activityData as Database['public']['Tables']['activities']['Insert'])
+    .insert(activityData)
     .select()
     .single();
 

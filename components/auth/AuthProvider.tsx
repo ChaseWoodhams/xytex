@@ -32,79 +32,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const supabase = createClient();
-      
-      // Add timeout to prevent hanging (10 seconds - increased for slower connections)
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
-      );
-      
-      const fetchPromise = supabase
+      const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', authUser.id)
         .single();
 
-      const result = await Promise.race([fetchPromise, timeoutPromise]);
-      const { data, error } = result as any;
-
       if (error) {
-        // Only log errors in development
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Error fetching user profile:', JSON.stringify(error, null, 2));
-        }
-        // Don't set to null immediately - might be a temporary issue
-        // Set a minimal profile based on auth user
-        setUserProfile({
-          id: authUser.id,
-          email: authUser.email || '',
-          full_name: null,
-          phone: null,
-          subscription_status: 'free_trial',
-          trial_started_at: null,
-          trial_expires_at: null,
-          role: 'customer',
-          created_at: authUser.created_at,
-          updated_at: authUser.updated_at || authUser.created_at,
-        } as User);
-      } else if (data) {
-        setUserProfile(data);
-      } else {
-        // No data returned but no error - create minimal profile
-        setUserProfile({
-          id: authUser.id,
-          email: authUser.email || '',
-          full_name: null,
-          phone: null,
-          subscription_status: 'free_trial',
-          trial_started_at: null,
-          trial_expires_at: null,
-          role: 'customer',
-          created_at: authUser.created_at,
-          updated_at: authUser.updated_at || authUser.created_at,
-        } as User);
-      }
-    } catch (error: any) {
-      // Only log timeout/errors in development, or if it's not a timeout
-      if (process.env.NODE_ENV === 'development' || error?.message !== 'Profile fetch timeout') {
         console.error('Error fetching user profile:', error);
-      }
-      // Create minimal profile from auth user so app doesn't break
-      if (authUser) {
-        setUserProfile({
-          id: authUser.id,
-          email: authUser.email || '',
-          full_name: null,
-          phone: null,
-          subscription_status: 'free_trial',
-          trial_started_at: null,
-          trial_expires_at: null,
-          role: 'customer',
-          created_at: authUser.created_at,
-          updated_at: authUser.updated_at || authUser.created_at,
-        } as User);
-      } else {
         setUserProfile(null);
+      } else {
+        setUserProfile(data);
       }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      setUserProfile(null);
     }
   };
 
@@ -115,57 +57,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    let mounted = true;
-    let subscription: { unsubscribe: () => void } | null = null;
+    try {
+      const supabase = createClient();
 
-    const initializeAuth = async () => {
-      try {
-        const supabase = createClient();
-
-        // Get initial session with timeout
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session fetch timeout')), 10000)
-        );
-
-        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
-        
-        if (!mounted) return;
-        
+      // Get initial session
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
         setUser(session?.user ?? null);
         await fetchUserProfile(session?.user ?? null);
-        
-        if (!mounted) return;
         setLoading(false);
+      });
 
-        // Listen for auth changes
-        const {
-          data: { subscription: sub },
-        } = supabase.auth.onAuthStateChange(async (_event, session) => {
-          if (!mounted) return;
-          setUser(session?.user ?? null);
-          await fetchUserProfile(session?.user ?? null);
-          if (!mounted) return;
-          setLoading(false);
-        });
-        
-        subscription = sub;
-      } catch (error) {
-        console.error('Error initializing Supabase client:', error);
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
+      // Listen for auth changes
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        setUser(session?.user ?? null);
+        await fetchUserProfile(session?.user ?? null);
+        setLoading(false);
+      });
 
-    initializeAuth();
-
-    return () => {
-      mounted = false;
-      if (subscription) {
-        subscription.unsubscribe();
-      }
-    };
+      return () => subscription.unsubscribe();
+    } catch (error) {
+      console.error('Error initializing Supabase client:', error);
+      setLoading(false);
+    }
   }, []);
 
   const signOut = async () => {

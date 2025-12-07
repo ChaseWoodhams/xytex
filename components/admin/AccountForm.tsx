@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CorporateAccount, AccountStatus } from "@/lib/supabase/types";
+import type { CorporateAccount, DealStage, AccountStatus } from "@/lib/supabase/types";
 import { Loader2 } from "lucide-react";
 
 interface AccountFormProps {
@@ -17,6 +17,7 @@ export default function AccountForm({ account }: AccountFormProps) {
     name: account?.name || "",
     website: account?.website || "",
     industry: account?.industry || "",
+    deal_stage: account?.deal_stage || ("prospect" as DealStage),
     annual_revenue: account?.annual_revenue?.toString() || "",
     employee_count: account?.employee_count?.toString() || "",
     status: account?.status || ("active" as AccountStatus),
@@ -73,22 +74,6 @@ export default function AccountForm({ account }: AccountFormProps) {
         </div>
       )}
 
-      {account?.code && (
-        <div>
-          <label className="block text-sm font-medium text-navy-700 mb-2">
-            Account Code
-          </label>
-          <div className="px-4 py-2 bg-cream-50 border border-navy-200 rounded-lg">
-            <span className="font-mono text-sm font-semibold text-gold-600">
-              {account.code}
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-navy-500">
-            This code is automatically generated and cannot be changed.
-          </p>
-        </div>
-      )}
-
       <div className="grid md:grid-cols-2 gap-6">
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-navy-700 mb-2">
@@ -128,6 +113,24 @@ export default function AccountForm({ account }: AccountFormProps) {
             onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
             className="w-full px-4 py-2 border border-navy-200 rounded-lg focus:ring-2 focus:ring-gold-500 focus:border-gold-500 outline-none"
           />
+        </div>
+
+        <div>
+          <label htmlFor="deal_stage" className="block text-sm font-medium text-navy-700 mb-2">
+            Deal Stage
+          </label>
+          <select
+            id="deal_stage"
+            value={formData.deal_stage}
+            onChange={(e) => setFormData({ ...formData, deal_stage: e.target.value as DealStage })}
+            className="w-full px-4 py-2 border border-navy-200 rounded-lg focus:ring-2 focus:ring-gold-500 focus:border-gold-500 outline-none"
+          >
+            <option value="prospect">Prospect</option>
+            <option value="qualified">Qualified</option>
+            <option value="negotiation">Negotiation</option>
+            <option value="closed_won">Closed Won</option>
+            <option value="closed_lost">Closed Lost</option>
+          </select>
         </div>
 
         <div>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import {
   Search,
@@ -15,23 +14,11 @@ import {
   Users,
   Loader2,
 } from "lucide-react";
-import { DonorCard, type Donor } from "@/components/donors";
+import { DonorCard, DonorFilters, type Donor } from "@/components/donors";
 import { transformDonor } from "@/lib/utils/donor-transform";
 import { useAuth } from "@/components/auth/AuthProvider";
 import Link from "next/link";
 import type { Donor as DatabaseDonor } from "@/lib/supabase/types";
-
-// Lazy load DonorFilters since it's a heavy component with many form controls
-const DonorFilters = dynamic(() => import("@/components/donors/DonorFilters"), {
-  loading: () => (
-    <div className="hidden lg:block">
-      <div className="bg-white rounded-xl p-6 shadow-md">
-        <div className="w-8 h-8 border-4 border-gold-500 border-t-transparent rounded-full animate-spin mx-auto" />
-      </div>
-    </div>
-  ),
-  ssr: false,
-});
 
 // Legacy mock data - kept as fallback during migration
 const mockDonors: Donor[] = [
