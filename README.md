@@ -54,7 +54,7 @@ Get these values from your Supabase project dashboard: **Settings > API**
 
 ### 4. Set up Supabase database
 
-Follow the instructions in [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md) to:
+Follow the instructions in [`SUPABASE_SETUP.md`](./docs/SUPABASE_SETUP.md) to:
 - Run database migrations
 - Migrate donor data
 - Configure authentication
@@ -154,6 +154,7 @@ xytex/
 ├── components/             # React components
 ├── lib/                   # Utility functions and Supabase clients
 ├── data/                  # Mock data files
+├── docs/                  # Documentation files
 ├── public/                # Static assets
 ├── supabase/              # Database migrations
 └── scripts/               # Utility scripts
@@ -161,9 +162,12 @@ xytex/
 
 ## Documentation
 
-- [`AGENTS.md`](./AGENTS.md) - Detailed project documentation for AI agents
-- [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md) - Supabase setup instructions
-- [`ADMIN_CRM_SETUP.md`](./ADMIN_CRM_SETUP.md) - Admin CRM setup guide
+All documentation is located in the [`docs/`](./docs/) directory:
+
+- [`docs/AGENTS.md`](./docs/AGENTS.md) - Detailed project documentation for AI agents
+- [`docs/SUPABASE_SETUP.md`](./docs/SUPABASE_SETUP.md) - Supabase setup instructions
+- [`docs/ADMIN_CRM_SETUP.md`](./docs/ADMIN_CRM_SETUP.md) - Admin CRM setup guide
+- [`docs/STYLE_GUIDE.md`](./docs/STYLE_GUIDE.md) - Comprehensive design system and style guide
 
 ## Learn More
 

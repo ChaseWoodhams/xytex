@@ -165,4 +165,3 @@ The following features have placeholder UI but need form implementations:
 - RLS policies ensure only authorized users can access data
 - File uploads require the `agreements` storage bucket to be created
 - The role column defaults to `'customer'` for new users
-

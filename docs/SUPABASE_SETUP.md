@@ -93,4 +93,3 @@ If you see a "Failed to fetch" error when trying to sign up or log in:
 - **Auth not working**: Check that environment variables are set correctly and server is restarted
 - **Donors not loading**: Verify RLS policies are enabled and donors table has data
 - **Email confirmation not working**: Check redirect URLs in Supabase Auth settings
-

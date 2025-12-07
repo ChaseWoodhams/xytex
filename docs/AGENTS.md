@@ -1,7 +1,7 @@
 # Xytex Website - Agent Documentation
 
 ## Project Overview
-Modern e-commerce style website for Xytex sperm bank, built with Next.js 14, TypeScript, and Tailwind CSS.
+Modern e-commerce style website for Xytex sperm bank, built with Next.js 16, TypeScript, and Tailwind CSS.
 
 **Created:** December 2025  
 **Status:** MVP Complete
@@ -9,7 +9,7 @@ Modern e-commerce style website for Xytex sperm bank, built with Next.js 14, Typ
 ---
 
 ## Tech Stack
-- **Framework:** Next.js 14 (App Router)
+- **Framework:** Next.js 16 (App Router)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS 4 with custom design tokens
 - **Fonts:** Playfair Display (headings), DM Sans (body)
@@ -198,4 +198,3 @@ npm run lint    # Run ESLint
 - Mobile-responsive with dedicated mobile navigation
 - Custom Tailwind theme with navy and gold color scales
 - Premium typography with Playfair Display for headings
-

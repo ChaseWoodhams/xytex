@@ -3,7 +3,7 @@
 A comprehensive documentation of all visual and technical design specifications for the Xytex website.
 
 **Last Updated:** December 2025  
-**Tech Stack:** Next.js 14, TypeScript, Tailwind CSS 4
+**Tech Stack:** Next.js 16, TypeScript, Tailwind CSS 4
 
 ---
 
