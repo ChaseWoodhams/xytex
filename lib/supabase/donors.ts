@@ -138,7 +138,7 @@ export async function searchDonors(
 
 export async function trackDonorView(userId: string, donorId: string): Promise<void> {
   const supabase = await createClient();
-  const { error } = await supabase.from('donor_views').insert({
+  const { error } = await (supabase.from('donor_views') as any).insert({
     user_id: userId,
     donor_id: donorId,
   });

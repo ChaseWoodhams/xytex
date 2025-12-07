@@ -37,8 +37,8 @@ export async function createActivity(
   activityData: Omit<Activity, 'id' | 'created_at' | 'updated_at'>
 ): Promise<Activity | null> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('activities')
+  const { data, error } = await (supabase
+    .from('activities') as any)
     .insert(activityData)
     .select()
     .single();
@@ -56,8 +56,8 @@ export async function updateActivity(
   updates: Partial<Omit<Activity, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'corporate_account_id'>>
 ): Promise<Activity | null> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('activities')
+  const { data, error } = await (supabase
+    .from('activities') as any)
     .update(updates)
     .eq('id', id)
     .select()

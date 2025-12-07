@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
     domains: [],
     remotePatterns: [],
   },
+  // Optimize for Vercel deployment
+  compress: true,
+  poweredByHeader: false,
 };
 
 export default nextConfig;

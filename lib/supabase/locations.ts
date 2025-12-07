@@ -41,15 +41,15 @@ export async function createLocation(
   
   // If this is marked as primary, unset other primary locations for this account
   if (locationData.is_primary) {
-    await supabase
-      .from('locations')
+    await (supabase
+      .from('locations') as any)
       .update({ is_primary: false })
       .eq('corporate_account_id', locationData.corporate_account_id)
       .eq('is_primary', true);
   }
 
-  const { data, error } = await supabase
-    .from('locations')
+  const { data, error } = await (supabase
+    .from('locations') as any)
     .insert(locationData)
     .select()
     .single();
@@ -72,8 +72,8 @@ export async function updateLocation(
   if (updates.is_primary === true) {
     const location = await getLocationById(id);
     if (location) {
-      await supabase
-        .from('locations')
+      await (supabase
+        .from('locations') as any)
         .update({ is_primary: false })
         .eq('corporate_account_id', location.corporate_account_id)
         .eq('is_primary', true)
@@ -81,8 +81,8 @@ export async function updateLocation(
     }
   }
 
-  const { data, error } = await supabase
-    .from('locations')
+  const { data, error } = await (supabase
+    .from('locations') as any)
     .update(updates)
     .eq('id', id)
     .select()

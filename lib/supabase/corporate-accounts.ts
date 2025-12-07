@@ -62,8 +62,8 @@ export async function createCorporateAccount(
   accountData: Omit<CorporateAccount, 'id' | 'created_at' | 'updated_at'>
 ): Promise<CorporateAccount | null> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('corporate_accounts')
+  const { data, error } = await (supabase
+    .from('corporate_accounts') as any)
     .insert(accountData)
     .select()
     .single();
@@ -81,8 +81,8 @@ export async function updateCorporateAccount(
   updates: Partial<Omit<CorporateAccount, 'id' | 'created_at' | 'updated_at' | 'created_by'>>
 ): Promise<CorporateAccount | null> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('corporate_accounts')
+  const { data, error } = await (supabase
+    .from('corporate_accounts') as any)
     .update(updates)
     .eq('id', id)
     .select()

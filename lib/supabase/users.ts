@@ -40,8 +40,8 @@ export async function createUserProfile(
 ): Promise<User | null> {
   // Use admin client to bypass RLS for user creation
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('users')
+  const { data, error } = await (supabase
+    .from('users') as any)
     .insert({
       id: userId,
       email,
@@ -69,8 +69,8 @@ export async function updateUserProfile(
   updates: Partial<Omit<User, 'id' | 'created_at' | 'updated_at'>>
 ): Promise<User | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('users')
+  const { data, error } = await (supabase
+    .from('users') as any)
     .update(updates)
     .eq('id', userId)
     .select()

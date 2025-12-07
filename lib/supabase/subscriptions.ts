@@ -27,7 +27,7 @@ export async function startTrial(userId: string): Promise<boolean> {
   const supabase = createAdminClient();
   
   // Call the database function to start trial
-  const { error } = await supabase.rpc('start_trial', {
+  const { error } = await (supabase.rpc as any)('start_trial', {
     user_uuid: userId,
   });
 
@@ -44,7 +44,7 @@ export async function checkTrialStatus(userId: string): Promise<boolean> {
   const supabase = await createClient();
   
   // Call the database function to check trial status
-  const { data, error } = await supabase.rpc('check_trial_status', {
+  const { data, error } = await (supabase.rpc as any)('check_trial_status', {
     user_uuid: userId,
   });
 
@@ -58,16 +58,16 @@ export async function checkTrialStatus(userId: string): Promise<boolean> {
 
 export async function isTrialExpired(userId: string): Promise<boolean> {
   const supabase = await createClient();
-  const { data: user } = await supabase
-    .from('users')
+  const { data: user } = await (supabase
+    .from('users') as any)
     .select('trial_expires_at')
     .eq('id', userId)
     .single();
 
-  if (!user || !user.trial_expires_at) {
+  if (!user || !(user as any).trial_expires_at) {
     return true;
   }
 
-  return new Date(user.trial_expires_at) < new Date();
+  return new Date((user as any).trial_expires_at) < new Date();
 }
 

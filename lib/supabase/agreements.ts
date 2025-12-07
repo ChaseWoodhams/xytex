@@ -53,8 +53,8 @@ export async function createAgreement(
   agreementData: Omit<Agreement, 'id' | 'created_at' | 'updated_at'>
 ): Promise<Agreement | null> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('agreements')
+  const { data, error } = await (supabase
+    .from('agreements') as any)
     .insert(agreementData)
     .select()
     .single();
@@ -72,8 +72,8 @@ export async function updateAgreement(
   updates: Partial<Omit<Agreement, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'corporate_account_id'>>
 ): Promise<Agreement | null> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('agreements')
+  const { data, error } = await (supabase
+    .from('agreements') as any)
     .update(updates)
     .eq('id', id)
     .select()

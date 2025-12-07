@@ -57,8 +57,8 @@ export async function createNote(
   noteData: Omit<Note, 'id' | 'created_at' | 'updated_at'>
 ): Promise<Note | null> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('notes')
+  const { data, error } = await (supabase
+    .from('notes') as any)
     .insert(noteData)
     .select()
     .single();
@@ -76,8 +76,8 @@ export async function updateNote(
   updates: Partial<Omit<Note, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'corporate_account_id'>>
 ): Promise<Note | null> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('notes')
+  const { data, error } = await (supabase
+    .from('notes') as any)
     .update(updates)
     .eq('id', id)
     .select()

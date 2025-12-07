@@ -23,7 +23,7 @@ export async function checkUserTrialStatus(userId: string): Promise<TrialStatus>
     .eq('id', userId)
     .single();
 
-  const expiresAt = user?.trial_expires_at || null;
+  const expiresAt = (user as any)?.trial_expires_at || null;
   let daysRemaining: number | null = null;
 
   if (expiresAt && isActive) {

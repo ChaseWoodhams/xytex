@@ -438,61 +438,67 @@ export default function LGBTQFamilyBuildingPage() {
               transition={{ duration: 0.6 }}
               className="bg-cream-50 rounded-2xl p-8 lg:p-10 border border-cream-200"
             >
-              <div className="mb-6">
-                <h3 className="text-2xl font-heading font-semibold text-navy-900 mb-2">
-                  {pathways[0].title}
-                </h3>
-                <p className="text-navy-700 font-medium">
-                  <strong>For:</strong> {pathways[0].for}
-                </p>
-              </div>
+              {pathways[0] && (
+                <>
+                  <div className="mb-6">
+                    <h3 className="text-2xl font-heading font-semibold text-navy-900 mb-2">
+                      {pathways[0].title}
+                    </h3>
+                    <p className="text-navy-700 font-medium">
+                      <strong>For:</strong> {pathways[0].for}
+                    </p>
+                  </div>
 
-              <div className="mb-6">
-                <p className="text-navy-700 font-medium mb-4">
-                  <strong>Your options include:</strong>
-                </p>
-                <div className="space-y-4">
-                  {pathways[0].options.map((option, idx) => (
-                    <div key={idx} className="pl-4 border-l-2 border-gold-400">
-                      <h4 className="font-semibold text-navy-900 mb-1">
-                        {option.title}
-                      </h4>
+                  <div className="mb-6">
+                    <p className="text-navy-700 font-medium mb-4">
+                      <strong>Your options include:</strong>
+                    </p>
+                    <div className="space-y-4">
+                      {pathways[0].options?.map((option, idx) => (
+                        <div key={idx} className="pl-4 border-l-2 border-gold-400">
+                          <h4 className="font-semibold text-navy-900 mb-1">
+                            {option.title}
+                          </h4>
+                          <p className="text-navy-700 text-sm leading-relaxed">
+                            {option.description}
+                            {'link' in option && option.link && (
+                              <>
+                                {" "}
+                                <Link
+                                  href={option.link}
+                                  className="text-gold-600 font-semibold hover:text-gold-700 transition-colors"
+                                >
+                                  {option.linkText} →
+                                </Link>
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {pathways[0].planningNote && (
+                    <div className="bg-white/50 rounded-lg p-4 mb-6">
                       <p className="text-navy-700 text-sm leading-relaxed">
-                        {option.description}
-                        {option.link && (
-                          <>
-                            {" "}
-                            <Link
-                              href={option.link}
-                              className="text-gold-600 font-semibold hover:text-gold-700 transition-colors"
-                            >
-                              {option.linkText} →
-                            </Link>
-                          </>
-                        )}
+                        {pathways[0].planningNote}
                       </p>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  )}
 
-              <div className="bg-white/50 rounded-lg p-4 mb-6">
-                <p className="text-navy-700 text-sm leading-relaxed">
-                  {pathways[0].planningNote}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-3">
-                {pathways[0].ctas.map((cta, idx) => (
-                  <Link
-                    key={idx}
-                    href={cta.href}
-                    className="btn btn-secondary text-sm px-6 py-2.5"
-                  >
-                    {cta.text}
-                  </Link>
-                ))}
-              </div>
+                  <div className="flex flex-wrap gap-3">
+                    {pathways[0].ctas?.map((cta, idx) => (
+                      <Link
+                        key={idx}
+                        href={cta.href}
+                        className="btn btn-secondary text-sm px-6 py-2.5"
+                      >
+                        {cta.text}
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
             </motion.div>
 
             {/* Pathway 2: Reciprocal IVF */}
@@ -503,65 +509,69 @@ export default function LGBTQFamilyBuildingPage() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="bg-cream-50 rounded-2xl p-8 lg:p-10 border border-cream-200"
             >
-              <div className="mb-6">
-                <h3 className="text-2xl font-heading font-semibold text-navy-900 mb-2">
-                  {pathways[1].title}
-                </h3>
-                <p className="text-navy-700 font-medium">
-                  <strong>For:</strong> {pathways[1].for}
-                </p>
-              </div>
+              {pathways[1] && (
+                <>
+                  <div className="mb-6">
+                    <h3 className="text-2xl font-heading font-semibold text-navy-900 mb-2">
+                      {pathways[1].title}
+                    </h3>
+                    <p className="text-navy-700 font-medium">
+                      <strong>For:</strong> {pathways[1].for}
+                    </p>
+                  </div>
 
-              <div className="mb-6">
-                <p className="text-navy-700 font-medium mb-3">
-                  <strong>How it works:</strong>
-                </p>
-                <p className="text-navy-700 mb-4 leading-relaxed">
-                  {pathways[1].howItWorks[0]} {pathways[1].howItWorks[1]} This
-                  means:
-                </p>
-                <ul className="space-y-2 mb-4">
-                  {pathways[1].whatItMeans.map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-navy-700">
-                      <CheckCircle2 className="w-5 h-5 text-gold-500 flex-shrink-0 mt-0.5" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                  <div className="mb-6">
+                    <p className="text-navy-700 font-medium mb-3">
+                      <strong>How it works:</strong>
+                    </p>
+                    <p className="text-navy-700 mb-4 leading-relaxed">
+                      {pathways[1].howItWorks?.[0]} {pathways[1].howItWorks?.[1]} This
+                      means:
+                    </p>
+                    <ul className="space-y-2 mb-4">
+                      {pathways[1].whatItMeans?.map((item, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-navy-700">
+                          <CheckCircle2 className="w-5 h-5 text-gold-500 flex-shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
-              <div className="mb-6">
-                <p className="text-navy-700 font-medium mb-3">
-                  <strong>What you'll need:</strong>
-                </p>
-                <ul className="space-y-2">
-                  {pathways[1].whatYouNeed.map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-navy-700">
-                      <CheckCircle2 className="w-5 h-5 text-gold-500 flex-shrink-0 mt-0.5" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                  <div className="mb-6">
+                    <p className="text-navy-700 font-medium mb-3">
+                      <strong>What you'll need:</strong>
+                    </p>
+                    <ul className="space-y-2">
+                      {pathways[1].whatYouNeed?.map((item, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-navy-700">
+                          <CheckCircle2 className="w-5 h-5 text-gold-500 flex-shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
-              <div className="bg-white/50 rounded-lg p-4 mb-6">
-                <p className="text-navy-700 text-sm leading-relaxed">
-                  <strong>Why families choose this:</strong>{" "}
-                  {pathways[1].whyChoose}
-                </p>
-              </div>
+                  <div className="bg-white/50 rounded-lg p-4 mb-6">
+                    <p className="text-navy-700 text-sm leading-relaxed">
+                      <strong>Why families choose this:</strong>{" "}
+                      {pathways[1].whyChoose}
+                    </p>
+                  </div>
 
-              <div className="flex flex-wrap gap-3">
-                {pathways[1].ctas.map((cta, idx) => (
-                  <Link
-                    key={idx}
-                    href={cta.href}
-                    className="btn btn-secondary text-sm px-6 py-2.5"
-                  >
-                    {cta.text}
-                  </Link>
-                ))}
-              </div>
+                  <div className="flex flex-wrap gap-3">
+                    {pathways[1].ctas?.map((cta, idx) => (
+                      <Link
+                        key={idx}
+                        href={cta.href}
+                        className="btn btn-secondary text-sm px-6 py-2.5"
+                      >
+                        {cta.text}
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
             </motion.div>
 
             {/* Pathway 3: Using a Gestational Carrier */}
@@ -572,67 +582,71 @@ export default function LGBTQFamilyBuildingPage() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="bg-cream-50 rounded-2xl p-8 lg:p-10 border border-cream-200"
             >
-              <div className="mb-6">
-                <h3 className="text-2xl font-heading font-semibold text-navy-900 mb-2">
-                  {pathways[2].title}
-                </h3>
-                <p className="text-navy-700 font-medium">
-                  <strong>For:</strong> {pathways[2].for}
-                </p>
-              </div>
+              {pathways[2] && (
+                <>
+                  <div className="mb-6">
+                    <h3 className="text-2xl font-heading font-semibold text-navy-900 mb-2">
+                      {pathways[2].title}
+                    </h3>
+                    <p className="text-navy-700 font-medium">
+                      <strong>For:</strong> {pathways[2].for}
+                    </p>
+                  </div>
 
-              <div className="mb-6">
-                <p className="text-navy-700 font-medium mb-4">
-                  <strong>Your options include:</strong>
-                </p>
-                <div className="space-y-4">
-                  {pathways[2].options.map((option, idx) => (
-                    <div key={idx} className="pl-4 border-l-2 border-gold-400">
-                      <h4 className="font-semibold text-navy-900 mb-1">
-                        {option.title}
-                      </h4>
-                      <p className="text-navy-700 text-sm leading-relaxed">
-                        {option.description}
-                      </p>
+                  <div className="mb-6">
+                    <p className="text-navy-700 font-medium mb-4">
+                      <strong>Your options include:</strong>
+                    </p>
+                    <div className="space-y-4">
+                      {pathways[2].options?.map((option, idx) => (
+                        <div key={idx} className="pl-4 border-l-2 border-gold-400">
+                          <h4 className="font-semibold text-navy-900 mb-1">
+                            {option.title}
+                          </h4>
+                          <p className="text-navy-700 text-sm leading-relaxed">
+                            {option.description}
+                          </p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
 
-              <div className="mb-6">
-                <p className="text-navy-700 font-medium mb-2">
-                  <strong>What Xytex provides:</strong>
-                </p>
-                <p className="text-navy-700 text-sm leading-relaxed">
-                  {pathways[2].whatXytexProvides}
-                </p>
-              </div>
+                  <div className="mb-6">
+                    <p className="text-navy-700 font-medium mb-2">
+                      <strong>What Xytex provides:</strong>
+                    </p>
+                    <p className="text-navy-700 text-sm leading-relaxed">
+                      {pathways[2].whatXytexProvides}
+                    </p>
+                  </div>
 
-              <div className="mb-6">
-                <p className="text-navy-700 font-medium mb-3">
-                  <strong>Key considerations:</strong>
-                </p>
-                <ul className="space-y-2">
-                  {pathways[2].keyConsiderations.map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-navy-700">
-                      <CheckCircle2 className="w-5 h-5 text-gold-500 flex-shrink-0 mt-0.5" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                  <div className="mb-6">
+                    <p className="text-navy-700 font-medium mb-3">
+                      <strong>Key considerations:</strong>
+                    </p>
+                    <ul className="space-y-2">
+                      {pathways[2].keyConsiderations?.map((item, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-navy-700">
+                          <CheckCircle2 className="w-5 h-5 text-gold-500 flex-shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
-              <div className="flex flex-wrap gap-3">
-                {pathways[2].ctas.map((cta, idx) => (
-                  <Link
-                    key={idx}
-                    href={cta.href}
-                    className="btn btn-secondary text-sm px-6 py-2.5"
-                  >
-                    {cta.text}
-                  </Link>
-                ))}
-              </div>
+                  <div className="flex flex-wrap gap-3">
+                    {pathways[2].ctas?.map((cta, idx) => (
+                      <Link
+                        key={idx}
+                        href={cta.href}
+                        className="btn btn-secondary text-sm px-6 py-2.5"
+                      >
+                        {cta.text}
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
             </motion.div>
 
             {/* Pathway 4: Known Donor vs. Sperm Bank */}
@@ -643,66 +657,70 @@ export default function LGBTQFamilyBuildingPage() {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="bg-cream-50 rounded-2xl p-8 lg:p-10 border border-cream-200"
             >
-              <div className="mb-6">
-                <h3 className="text-2xl font-heading font-semibold text-navy-900 mb-2">
-                  {pathways[3].title}
-                </h3>
-                <p className="text-navy-700 font-medium">
-                  <strong>For:</strong> {pathways[3].for}
-                </p>
-              </div>
+              {pathways[3] && (
+                <>
+                  <div className="mb-6">
+                    <h3 className="text-2xl font-heading font-semibold text-navy-900 mb-2">
+                      {pathways[3].title}
+                    </h3>
+                    <p className="text-navy-700 font-medium">
+                      <strong>For:</strong> {pathways[3].for}
+                    </p>
+                  </div>
 
-              <div className="mb-6">
-                <p className="text-navy-700 font-medium mb-4">
-                  <strong>Why families choose a sperm bank:</strong>
-                </p>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b-2 border-gold-400">
-                        <th className="text-left py-3 px-4 font-semibold text-navy-900">
-                          Sperm Bank
-                        </th>
-                        <th className="text-left py-3 px-4 font-semibold text-navy-900">
-                          Known Donor
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pathways[3].comparison.spermBank.map((item, idx) => (
-                        <tr key={idx} className="border-b border-cream-200">
-                          <td className="py-3 px-4 text-navy-700">
-                            <CheckCircle2 className="w-4 h-4 text-gold-500 inline mr-2" />
-                            {item}
-                          </td>
-                          <td className="py-3 px-4 text-navy-600">
-                            {pathways[3].comparison.knownDonor[idx]}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                  <div className="mb-6">
+                    <p className="text-navy-700 font-medium mb-4">
+                      <strong>Why families choose a sperm bank:</strong>
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b-2 border-gold-400">
+                            <th className="text-left py-3 px-4 font-semibold text-navy-900">
+                              Sperm Bank
+                            </th>
+                            <th className="text-left py-3 px-4 font-semibold text-navy-900">
+                              Known Donor
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pathways[3].comparison?.spermBank?.map((item, idx) => (
+                            <tr key={idx} className="border-b border-cream-200">
+                              <td className="py-3 px-4 text-navy-700">
+                                <CheckCircle2 className="w-4 h-4 text-gold-500 inline mr-2" />
+                                {item}
+                              </td>
+                              <td className="py-3 px-4 text-navy-600">
+                                {pathways[3].comparison?.knownDonor?.[idx]}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
 
-              <div className="bg-white/50 rounded-lg p-4 mb-6">
-                <p className="text-navy-700 text-sm leading-relaxed">
-                  <strong>Our recommendation:</strong>{" "}
-                  {pathways[3].recommendation}
-                </p>
-              </div>
+                  <div className="bg-white/50 rounded-lg p-4 mb-6">
+                    <p className="text-navy-700 text-sm leading-relaxed">
+                      <strong>Our recommendation:</strong>{" "}
+                      {pathways[3].recommendation}
+                    </p>
+                  </div>
 
-              <div className="flex flex-wrap gap-3">
-                {pathways[3].ctas.map((cta, idx) => (
-                  <Link
-                    key={idx}
-                    href={cta.href}
-                    className="btn btn-secondary text-sm px-6 py-2.5"
-                  >
-                    {cta.text}
-                  </Link>
-                ))}
-              </div>
+                  <div className="flex flex-wrap gap-3">
+                    {pathways[3].ctas?.map((cta, idx) => (
+                      <Link
+                        key={idx}
+                        href={cta.href}
+                        className="btn btn-secondary text-sm px-6 py-2.5"
+                      >
+                        {cta.text}
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
             </motion.div>
 
             {/* Pathway 5: Single & LGBTQ+ */}
@@ -713,28 +731,32 @@ export default function LGBTQFamilyBuildingPage() {
               transition={{ duration: 0.6, delay: 0.4 }}
               className="bg-cream-50 rounded-2xl p-8 lg:p-10 border border-cream-200"
             >
-              <div className="flex items-start gap-6">
-                <div className="w-16 h-16 rounded-xl bg-navy-900 flex items-center justify-center flex-shrink-0">
-                  <User className="w-8 h-8 text-gold-400" />
+              {pathways[4] && (
+                <div className="flex items-start gap-6">
+                  <div className="w-16 h-16 rounded-xl bg-navy-900 flex items-center justify-center flex-shrink-0">
+                    <User className="w-8 h-8 text-gold-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-heading font-semibold text-navy-900 mb-2">
+                      {pathways[4].title}
+                    </h3>
+                    <p className="text-navy-700 font-medium mb-4">
+                      <strong>For:</strong> {pathways[4].for}
+                    </p>
+                    <p className="text-navy-700 mb-6 leading-relaxed">
+                      {pathways[4].description}
+                    </p>
+                    {pathways[4].cta && (
+                      <Link
+                        href={pathways[4].cta.href}
+                        className="btn btn-secondary text-sm px-6 py-2.5 inline-flex items-center gap-2"
+                      >
+                        {pathways[4].cta.text} →
+                      </Link>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-2xl font-heading font-semibold text-navy-900 mb-2">
-                    {pathways[4].title}
-                  </h3>
-                  <p className="text-navy-700 font-medium mb-4">
-                    <strong>For:</strong> {pathways[4].for}
-                  </p>
-                  <p className="text-navy-700 mb-6 leading-relaxed">
-                    {pathways[4].description}
-                  </p>
-                  <Link
-                    href={pathways[4].cta.href}
-                    className="btn btn-secondary text-sm px-6 py-2.5 inline-flex items-center gap-2"
-                  >
-                    {pathways[4].cta.text} →
-                  </Link>
-                </div>
-              </div>
+              )}
             </motion.div>
           </div>
         </div>
@@ -1032,60 +1054,64 @@ export default function LGBTQFamilyBuildingPage() {
               transition={{ duration: 0.6 }}
               className="bg-cream-50 rounded-2xl p-8 lg:p-10 border border-cream-200"
             >
-              <div className="flex gap-6 mb-6">
-                <div className="w-16 h-16 rounded-xl bg-navy-900 flex items-center justify-center flex-shrink-0">
-                  <Warehouse className="w-8 h-8 text-gold-400" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-2xl font-heading font-semibold text-navy-900 mb-3">
-                    {futurePlanning[0].title}
-                  </h3>
-                  <p className="text-navy-700 font-medium mb-4">
-                    <strong>Why it matters:</strong>{" "}
-                    {futurePlanning[0].whyItMatters}
-                  </p>
-                </div>
-              </div>
+              {futurePlanning[0] && (
+                <>
+                  <div className="flex gap-6 mb-6">
+                    <div className="w-16 h-16 rounded-xl bg-navy-900 flex items-center justify-center flex-shrink-0">
+                      <Warehouse className="w-8 h-8 text-gold-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-heading font-semibold text-navy-900 mb-3">
+                        {futurePlanning[0].title}
+                      </h3>
+                      <p className="text-navy-700 font-medium mb-4">
+                        <strong>Why it matters:</strong>{" "}
+                        {futurePlanning[0].whyItMatters}
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="mb-6">
-                <p className="text-navy-700 font-medium mb-3">
-                  <strong>How to plan:</strong>
-                </p>
-                <ol className="space-y-2 list-decimal list-inside">
-                  {futurePlanning[0].howToPlan.map((item, idx) => (
-                    <li key={idx} className="text-navy-700 leading-relaxed">
-                      {item}
-                    </li>
-                  ))}
-                </ol>
-              </div>
+                  <div className="mb-6">
+                    <p className="text-navy-700 font-medium mb-3">
+                      <strong>How to plan:</strong>
+                    </p>
+                    <ol className="space-y-2 list-decimal list-inside">
+                      {futurePlanning[0].howToPlan?.map((item, idx) => (
+                        <li key={idx} className="text-navy-700 leading-relaxed">
+                          {item}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
 
-              <div className="mb-6">
-                <p className="text-navy-700 font-medium mb-3">
-                  <strong>Storage incentives:</strong>
-                </p>
-                <ul className="space-y-2">
-                  {futurePlanning[0].storageIncentives.map((item, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-start gap-2 text-navy-700"
-                    >
-                      <CheckCircle2 className="w-5 h-5 text-gold-500 flex-shrink-0 mt-0.5" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                  <div className="mb-6">
+                    <p className="text-navy-700 font-medium mb-3">
+                      <strong>Storage incentives:</strong>
+                    </p>
+                    <ul className="space-y-2">
+                      {futurePlanning[0].storageIncentives?.map((item, idx) => (
+                        <li
+                          key={idx}
+                          className="flex items-start gap-2 text-navy-700"
+                        >
+                          <CheckCircle2 className="w-5 h-5 text-gold-500 flex-shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
-              {futurePlanning[0].testimonial && (
-                <div className="bg-white rounded-lg p-4 border-l-4 border-gold-400">
-                  <p className="text-navy-700 italic mb-2">
-                    &ldquo;{futurePlanning[0].testimonial.quote}&rdquo;
-                  </p>
-                  <p className="text-sm text-navy-600">
-                    — {futurePlanning[0].testimonial.author}
-                  </p>
-                </div>
+                  {futurePlanning[0].testimonial && (
+                    <div className="bg-white rounded-lg p-4 border-l-4 border-gold-400">
+                      <p className="text-navy-700 italic mb-2">
+                        &ldquo;{futurePlanning[0].testimonial.quote}&rdquo;
+                      </p>
+                      <p className="text-sm text-navy-600">
+                        — {futurePlanning[0].testimonial.author}
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </motion.div>
 
@@ -1097,72 +1123,76 @@ export default function LGBTQFamilyBuildingPage() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="bg-cream-50 rounded-2xl p-8 lg:p-10 border border-cream-200"
             >
-              <div className="flex gap-6 mb-6">
-                <div className="w-16 h-16 rounded-xl bg-navy-900 flex items-center justify-center flex-shrink-0">
-                  <DollarSign className="w-8 h-8 text-gold-400" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-2xl font-heading font-semibold text-navy-900 mb-3">
-                    {futurePlanning[1].title}
-                  </h3>
-                  <p className="text-navy-700 font-medium mb-4">
-                    <strong>Transparent pricing matters.</strong> Here's what to
-                    budget for:
-                  </p>
-                </div>
-              </div>
+              {futurePlanning[1] && (
+                <>
+                  <div className="flex gap-6 mb-6">
+                    <div className="w-16 h-16 rounded-xl bg-navy-900 flex items-center justify-center flex-shrink-0">
+                      <DollarSign className="w-8 h-8 text-gold-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-heading font-semibold text-navy-900 mb-3">
+                        {futurePlanning[1].title}
+                      </h3>
+                      <p className="text-navy-700 font-medium mb-4">
+                        <strong>Transparent pricing matters.</strong> Here's what to
+                        budget for:
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="overflow-x-auto mb-6">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b-2 border-gold-400">
-                      <th className="text-left py-3 px-4 font-semibold text-navy-900">
-                        Item
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-navy-900">
-                        Typical Cost
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {futurePlanning[1].items.map((item, idx) => (
-                      <tr key={idx} className="border-b border-cream-200">
-                        <td className="py-3 px-4 text-navy-700 font-medium">
-                          {item.item}
-                        </td>
-                        <td className="py-3 px-4 text-navy-700">{item.cost}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  <div className="overflow-x-auto mb-6">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b-2 border-gold-400">
+                          <th className="text-left py-3 px-4 font-semibold text-navy-900">
+                            Item
+                          </th>
+                          <th className="text-left py-3 px-4 font-semibold text-navy-900">
+                            Typical Cost
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {futurePlanning[1].items?.map((item, idx) => (
+                          <tr key={idx} className="border-b border-cream-200">
+                            <td className="py-3 px-4 text-navy-700 font-medium">
+                              {item.item}
+                            </td>
+                            <td className="py-3 px-4 text-navy-700">{item.cost}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-              <div className="mb-4">
-                <p className="text-navy-700 text-sm">
-                  <strong>Not included:</strong> {futurePlanning[1].note}
-                </p>
-              </div>
+                  <div className="mb-4">
+                    <p className="text-navy-700 text-sm">
+                      <strong>Not included:</strong> {futurePlanning[1].note}
+                    </p>
+                  </div>
 
-              <div className="bg-white rounded-lg p-4 border-l-4 border-gold-400">
-                <p className="text-navy-700 text-sm leading-relaxed">
-                  <strong>{futurePlanning[1].financing}</strong>{" "}
-                  <Link
-                    href="/pricing"
-                    className="text-gold-600 font-semibold hover:text-gold-700 transition-colors"
-                  >
-                    Learn more →
-                  </Link>
-                </p>
-              </div>
+                  <div className="bg-white rounded-lg p-4 border-l-4 border-gold-400">
+                    <p className="text-navy-700 text-sm leading-relaxed">
+                      <strong>{futurePlanning[1].financing}</strong>{" "}
+                      <Link
+                        href="/pricing"
+                        className="text-gold-600 font-semibold hover:text-gold-700 transition-colors"
+                      >
+                        Learn more →
+                      </Link>
+                    </p>
+                  </div>
 
-              <div className="mt-6">
-                <Link
-                  href="/pricing"
-                  className="btn btn-secondary text-sm px-6 py-2.5"
-                >
-                  View Full Pricing
-                </Link>
-              </div>
+                  <div className="mt-6">
+                    <Link
+                      href="/pricing"
+                      className="btn btn-secondary text-sm px-6 py-2.5"
+                    >
+                      View Full Pricing
+                    </Link>
+                  </div>
+                </>
+              )}
             </motion.div>
           </div>
         </div>
