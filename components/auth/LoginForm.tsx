@@ -39,6 +39,8 @@ export default function LoginForm() {
       }
 
       if (data.user) {
+        // Small delay to ensure session is persisted in cookies
+        await new Promise(resolve => setTimeout(resolve, 200));
         router.push("/browse-donors");
         router.refresh();
       }

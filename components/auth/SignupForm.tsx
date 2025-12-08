@@ -84,6 +84,8 @@ export default function SignupForm() {
           // Check if email confirmation is required
           if (authData.session) {
             // User is immediately signed in (email confirmation disabled)
+            // Small delay to ensure session is persisted in cookies
+            await new Promise(resolve => setTimeout(resolve, 200));
             router.push("/browse-donors");
             router.refresh();
           } else {

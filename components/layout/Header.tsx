@@ -73,6 +73,20 @@ export default function Header() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
+  // Debug: Log auth state changes
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Header Auth State:', {
+        hasUser: !!user,
+        hasUserProfile: !!userProfile,
+        loading,
+        userId: user?.id || 'none',
+        userEmail: user?.email || 'none',
+        willShowDropdown: !loading && !!user
+      });
+    }
+  }, [user, userProfile, loading]);
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -206,12 +220,11 @@ export default function Header() {
               <span>1-800-277-3210</span>
             </a>
 
-            {!loading && (
-              <>
-                {user ? (
-                  <>
-                    {/* User Menu */}
-                    <div className="relative">
+            {/* Auth Section - Show loading state or auth buttons */}
+            {loading ? (
+              <div className="w-20 h-8 animate-pulse bg-white/10 rounded" aria-label="Loading" />
+            ) : user ? (
+              <div className="relative">
                       <button
                         onClick={() => setUserMenuOpen(!userMenuOpen)}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
@@ -220,6 +233,7 @@ export default function Header() {
                             : "text-white hover:bg-white/10"
                         }`}
                         aria-label="User menu"
+                        aria-expanded={userMenuOpen}
                       >
                         <User className="w-4 h-4" aria-hidden="true" />
                         <span className="text-sm font-medium">Account</span>
@@ -232,7 +246,7 @@ export default function Header() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 10 }}
-                            className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-navy-100 overflow-hidden"
+                            className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-navy-100 overflow-hidden z-50"
                             onMouseLeave={() => setUserMenuOpen(false)}
                           >
                             <Link
@@ -277,29 +291,26 @@ export default function Header() {
                           </motion.div>
                         )}
                       </AnimatePresence>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {/* Login/Signup Buttons */}
-                    <Link
-                      href="/login"
-                      className={`text-sm font-medium transition-colors ${
-                        isScrolled
-                          ? "text-navy-700 hover:text-gold-600"
-                          : "text-white hover:text-gold-300"
-                      }`}
-                    >
-                      Sign In
-                    </Link>
-                    <Link
-                      href="/signup"
-                      className="btn btn-primary text-sm px-5 py-2.5"
-                    >
-                      Start Free Trial
-                    </Link>
-                  </>
-                )}
+              </div>
+            ) : (
+              <>
+                {/* Login/Signup Buttons */}
+                <Link
+                  href="/login"
+                  className={`text-sm font-medium transition-colors ${
+                    isScrolled
+                      ? "text-navy-700 hover:text-gold-600"
+                      : "text-white hover:text-gold-300"
+                  }`}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="btn btn-primary text-sm px-5 py-2.5"
+                >
+                  Start Free Trial
+                </Link>
               </>
             )}
           </div>

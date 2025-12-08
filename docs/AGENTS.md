@@ -174,6 +174,33 @@ npm run lint    # Run ESLint
 
 ---
 
+## Git & GitHub Operations
+
+**IMPORTANT:** When the user requests to push to the repository or needs any GitHub-related information, **ALWAYS use the GitHub MCP tools** instead of terminal git commands.
+
+### GitHub MCP Tools Available:
+- Use `mcp_user-github_push_files` to push multiple files in a single commit
+- Use `mcp_user-github_create_or_update_file` for individual file operations
+- Use `mcp_user-github_get_file_contents` to read files from the repository
+- Use `mcp_user-github_list_commits` to view commit history
+- Use `mcp_user-github_get_me` to get repository owner information
+- Use other GitHub MCP tools as needed for repository operations
+
+### When to Use GitHub MCP:
+- **Pushing changes to GitHub** - Use `mcp_user-github_push_files` with all modified files
+- **Checking repository status** - Use `mcp_user-github_list_commits` or `mcp_user-github_get_file_contents`
+- **Creating or updating files** - Use `mcp_user-github_create_or_update_file`
+- **Any GitHub-related queries** - Prefer MCP tools over terminal git commands
+
+### Example Workflow:
+1. Read local files that need to be pushed
+2. Use `mcp_user-github_push_files` with all files and a detailed commit message
+3. Verify the push was successful using `mcp_user-github_list_commits`
+
+**Note:** The GitHub MCP tools provide better reliability and visibility compared to terminal git commands, especially for push operations.
+
+---
+
 ## Future Enhancements (from CRO Plan)
 
 ### Phase 2 (Medium-term)
