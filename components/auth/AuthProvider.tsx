@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }, 500);
             return;
           }
-        setUser(session?.user ?? null);
+          setUser(session?.user ?? null);
           // Don't wait for profile - set loading false immediately, fetch profile in background
           setLoading(false);
           clearTimeout(loadingTimeout);
@@ -111,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (err) {
           console.error('Error in getInitialSession:', err);
-        setLoading(false);
+          setLoading(false);
           clearTimeout(loadingTimeout);
         }
       };
@@ -136,8 +136,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             fetchUserProfile(session.user).catch(console.error);
           }
         } else {
-        setUser(session?.user ?? null);
-        setLoading(false);
+          setUser(session?.user ?? null);
+          setLoading(false);
           // Fetch profile in background, don't block
           if (session?.user) {
             fetchUserProfile(session.user).catch(console.error);

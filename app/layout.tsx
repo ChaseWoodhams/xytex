@@ -54,9 +54,9 @@ export default function RootLayout({
             Skip to main content
           </a>
           <ConditionalLayout>
-          <main id="main-content" tabIndex={-1}>
-            {children}
-          </main>
+            <main id="main-content" tabIndex={-1}>
+              {children}
+            </main>
           </ConditionalLayout>
         </AuthProvider>
       </body>

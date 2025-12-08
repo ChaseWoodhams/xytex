@@ -224,7 +224,7 @@ export default function Header() {
             {loading ? (
               <div className="w-20 h-8 animate-pulse bg-white/10 rounded" aria-label="Loading" />
             ) : user ? (
-                    <div className="relative">
+              <div className="relative">
                       <button
                         onClick={() => setUserMenuOpen(!userMenuOpen)}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
@@ -291,26 +291,26 @@ export default function Header() {
                           </motion.div>
                         )}
                       </AnimatePresence>
-                    </div>
-                ) : (
-                  <>
-                    {/* Login/Signup Buttons */}
-                    <Link
-                      href="/login"
-                      className={`text-sm font-medium transition-colors ${
-                        isScrolled
-                          ? "text-navy-700 hover:text-gold-600"
-                          : "text-white hover:text-gold-300"
-                      }`}
-                    >
-                      Sign In
-                    </Link>
-                    <Link
-                      href="/signup"
-                      className="btn btn-primary text-sm px-5 py-2.5"
-                    >
-                      Start Free Trial
-                    </Link>
+              </div>
+            ) : (
+              <>
+                {/* Login/Signup Buttons */}
+                <Link
+                  href="/login"
+                  className={`text-sm font-medium transition-colors ${
+                    isScrolled
+                      ? "text-navy-700 hover:text-gold-600"
+                      : "text-white hover:text-gold-300"
+                  }`}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="btn btn-primary text-sm px-5 py-2.5"
+                >
+                  Start Free Trial
+                </Link>
               </>
             )}
           </div>
