@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getAgreementById, getAgreementsByLocation } from "@/lib/supabase/agreements";
-import { getCorporateAccountById } from "@/lib/supabase/corporate-accounts";
+import { getAccountById } from "@/lib/supabase/accounts";
 import { getLocationById } from "@/lib/supabase/locations";
 import AgreementDetailView from "@/components/admin/AgreementDetailView";
 
@@ -26,7 +26,7 @@ export default async function AgreementDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const account = await getCorporateAccountById(agreement.corporate_account_id);
+  const account = await getAccountById(agreement.account_id);
   if (!account) {
     notFound();
   }

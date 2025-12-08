@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { getCorporateAccounts, createCorporateAccount } from '@/lib/supabase/corporate-accounts';
+import { getAccounts, createAccount } from '@/lib/supabase/accounts';
 import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
 import { NextResponse } from 'next/server';
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
       filters.search = searchParam;
     }
 
-    const accounts = await getCorporateAccounts(filters);
+    const accounts = await getAccounts(filters);
     return NextResponse.json(accounts);
   } catch (error: any) {
     console.error('Error fetching accounts:', error);
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
       created_by: user.id,
     };
 
-    const account = await createCorporateAccount(accountData);
+    const account = await createAccount(accountData);
 
     if (!account) {
       return NextResponse.json(

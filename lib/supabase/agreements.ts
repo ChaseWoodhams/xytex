@@ -6,7 +6,7 @@ export async function getAgreementsByAccount(accountId: string): Promise<Agreeme
   const { data, error } = await supabase
     .from('agreements')
     .select('*')
-    .eq('corporate_account_id', accountId)
+    .eq('account_id', accountId)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -69,7 +69,7 @@ export async function createAgreement(
 
 export async function updateAgreement(
   id: string,
-  updates: Partial<Omit<Agreement, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'corporate_account_id'>>
+  updates: Partial<Omit<Agreement, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'account_id'>>
 ): Promise<Agreement | null> {
   const supabase = createAdminClient();
   const { data, error } = await (supabase

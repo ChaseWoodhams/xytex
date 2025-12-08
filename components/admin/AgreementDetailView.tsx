@@ -3,12 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Agreement, CorporateAccount, Location } from "@/lib/supabase/types";
+import type { Agreement, Account, Location } from "@/lib/supabase/types";
 import { ArrowLeft, FileText, MapPin, Calendar, DollarSign, Percent, Loader2, Download } from "lucide-react";
 
 interface AgreementDetailViewProps {
   agreement: Agreement;
-  account: CorporateAccount;
+  account: Account;
   location: Location | null;
   locationAgreements: Agreement[];
 }
@@ -87,7 +87,7 @@ export default function AgreementDetailView({
           <p className="mt-2 text-sm text-navy-600">
             Account:{" "}
             <Link
-              href={`/admin/accounts/${agreement.corporate_account_id}`}
+              href={`/admin/accounts/${agreement.account_id}`}
               className="text-gold-600 hover:text-gold-700 font-medium"
             >
               {account.name}

@@ -1,12 +1,12 @@
 import { createAdminClient } from './admin';
-import type { Location, LocationStatus } from './types';
+import type { Location } from './types';
 
 export async function getLocationsByAccount(accountId: string): Promise<Location[]> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('locations')
     .select('*')
-    .eq('corporate_account_id', accountId)
+    .eq('account_id', accountId)
     .order('is_primary', { ascending: false })
     .order('created_at', { ascending: false });
 
@@ -39,17 +39,20 @@ export async function createLocation(
 ): Promise<Location | null> {
   const supabase = createAdminClient();
   
+  // Check if this account already has locations
+  const existingLocations = await getLocationsByAccount(locationData.account_id);
+  
   // If this is marked as primary, unset other primary locations for this account
   if (locationData.is_primary) {
-    await (supabase
-      .from('locations') as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase.from('locations') as any)
       .update({ is_primary: false })
-      .eq('corporate_account_id', locationData.corporate_account_id)
+      .eq('account_id', locationData.account_id)
       .eq('is_primary', true);
   }
 
-  const { data, error } = await (supabase
-    .from('locations') as any)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('locations') as any)
     .insert(locationData)
     .select()
     .single();
@@ -59,12 +62,25 @@ export async function createLocation(
     return null;
   }
 
+  // If this is the second location (or more), convert account to multi_location
+  if (existingLocations.length >= 1) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: updateError } = await (supabase.from('accounts') as any)
+      .update({ account_type: 'multi_location' })
+      .eq('id', locationData.account_id);
+
+    if (updateError) {
+      console.error('Error updating account type:', updateError);
+      // Don't fail the location creation if account update fails
+    }
+  }
+
   return data;
 }
 
 export async function updateLocation(
   id: string,
-  updates: Partial<Omit<Location, 'id' | 'created_at' | 'updated_at' | 'corporate_account_id'>>
+  updates: Partial<Omit<Location, 'id' | 'created_at' | 'updated_at' | 'account_id'>>
 ): Promise<Location | null> {
   const supabase = createAdminClient();
   
@@ -72,17 +88,17 @@ export async function updateLocation(
   if (updates.is_primary === true) {
     const location = await getLocationById(id);
     if (location) {
-      await (supabase
-        .from('locations') as any)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from('locations') as any)
         .update({ is_primary: false })
-        .eq('corporate_account_id', location.corporate_account_id)
+        .eq('account_id', location.account_id)
         .eq('is_primary', true)
         .neq('id', id);
     }
   }
 
-  const { data, error } = await (supabase
-    .from('locations') as any)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('locations') as any)
     .update(updates)
     .eq('id', id)
     .select()

@@ -1,0 +1,16 @@
+-- Add UDF fields to accounts table
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS udf_clinic_code TEXT;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS udf_clinic_name TEXT;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS udf_shipto_name TEXT;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS udf_address_line1 TEXT;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS udf_address_line2 TEXT;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS udf_address_line3 TEXT;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS udf_city TEXT;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS udf_state TEXT;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS udf_zipcode TEXT;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS udf_fax TEXT;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS udf_notes TEXT;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS udf_phone TEXT;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS udf_email TEXT;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS udf_country_code TEXT;
+

@@ -1,0 +1,77 @@
+-- Drop old RLS policies (before renaming table)
+DROP POLICY IF EXISTS "BD team and admins can view all corporate accounts" ON corporate_accounts;
+DROP POLICY IF EXISTS "BD team and admins can insert corporate accounts" ON corporate_accounts;
+DROP POLICY IF EXISTS "BD team and admins can update corporate accounts" ON corporate_accounts;
+DROP POLICY IF EXISTS "BD team and admins can delete corporate accounts" ON corporate_accounts;
+
+-- Drop old trigger (before renaming table)
+DROP TRIGGER IF EXISTS update_corporate_accounts_updated_at ON corporate_accounts;
+
+-- Rename corporate_accounts table to accounts
+ALTER TABLE corporate_accounts RENAME TO accounts;
+
+-- Rename foreign key columns in related tables
+ALTER TABLE locations RENAME COLUMN corporate_account_id TO account_id;
+ALTER TABLE agreements RENAME COLUMN corporate_account_id TO account_id;
+ALTER TABLE activities RENAME COLUMN corporate_account_id TO account_id;
+ALTER TABLE notes RENAME COLUMN corporate_account_id TO account_id;
+
+-- Drop old indexes
+DROP INDEX IF EXISTS idx_corporate_accounts_status;
+DROP INDEX IF EXISTS idx_corporate_accounts_deal_stage;
+DROP INDEX IF EXISTS idx_corporate_accounts_created_by;
+DROP INDEX IF EXISTS idx_locations_account_id;
+DROP INDEX IF EXISTS idx_agreements_account_id;
+DROP INDEX IF EXISTS idx_activities_account_id;
+DROP INDEX IF EXISTS idx_notes_account_id;
+
+-- Create new indexes with updated names
+CREATE INDEX IF NOT EXISTS idx_accounts_status ON accounts(status);
+CREATE INDEX IF NOT EXISTS idx_accounts_created_by ON accounts(created_by);
+CREATE INDEX IF NOT EXISTS idx_locations_account_id ON locations(account_id);
+CREATE INDEX IF NOT EXISTS idx_agreements_account_id ON agreements(account_id);
+CREATE INDEX IF NOT EXISTS idx_activities_account_id ON activities(account_id);
+CREATE INDEX IF NOT EXISTS idx_notes_account_id ON notes(account_id);
+
+-- Create new RLS policies with updated names
+CREATE POLICY "BD team and admins can view all accounts" ON accounts
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
+      AND users.role IN ('bd_team', 'admin')
+    )
+  );
+
+CREATE POLICY "BD team and admins can insert accounts" ON accounts
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
+      AND users.role IN ('bd_team', 'admin')
+    )
+    AND created_by = auth.uid()
+  );
+
+CREATE POLICY "BD team and admins can update accounts" ON accounts
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
+      AND users.role IN ('bd_team', 'admin')
+    )
+  );
+
+CREATE POLICY "BD team and admins can delete accounts" ON accounts
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
+      AND users.role IN ('bd_team', 'admin')
+    )
+  );
+
+-- Create new trigger with updated name
+CREATE TRIGGER update_accounts_updated_at BEFORE UPDATE ON accounts
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+

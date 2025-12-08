@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Location } from "@/lib/supabase/types";
 import { MapPin, Plus, Edit, Trash2 } from "lucide-react";
+import LocationForm from "./LocationForm";
 
 interface LocationsListProps {
   accountId: string;
@@ -11,6 +14,7 @@ interface LocationsListProps {
 
 export default function LocationsList({ accountId, locations }: LocationsListProps) {
   const [showForm, setShowForm] = useState(false);
+  const router = useRouter();
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6">
@@ -43,11 +47,18 @@ export default function LocationsList({ accountId, locations }: LocationsListPro
               className="border border-navy-200 rounded-lg p-4 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between">
-                <div className="flex-1">
+                <div
+                  className="flex-1 cursor-pointer"
+                  onClick={() => router.push(`/admin/locations/${location.id}`)}
+                >
                   <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-lg font-heading font-semibold text-navy-900">
+                    <Link
+                      href={`/admin/locations/${location.id}`}
+                      className="text-lg font-heading font-semibold text-navy-900 hover:text-gold-600"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {location.name}
-                    </h3>
+                    </Link>
                     {location.is_primary && (
                       <span className="px-2 py-1 text-xs font-semibold bg-gold-100 text-gold-800 rounded-full">
                         Primary
@@ -81,6 +92,7 @@ export default function LocationsList({ accountId, locations }: LocationsListPro
                       <p>
                         <a
                           href={`tel:${location.phone}`}
+                          onClick={(e) => e.stopPropagation()}
                           className="text-gold-600 hover:text-gold-700"
                         >
                           {location.phone}
@@ -91,6 +103,7 @@ export default function LocationsList({ accountId, locations }: LocationsListPro
                       <p>
                         <a
                           href={`mailto:${location.email}`}
+                          onClick={(e) => e.stopPropagation()}
                           className="text-gold-600 hover:text-gold-700"
                         >
                           {location.email}
@@ -108,7 +121,7 @@ export default function LocationsList({ accountId, locations }: LocationsListPro
                     <p className="mt-2 text-sm text-navy-600">{location.notes}</p>
                   )}
                 </div>
-                <div className="flex gap-2 ml-4">
+                <div className="flex gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
                   <button className="p-2 text-navy-600 hover:text-gold-600 hover:bg-gold-50 rounded-lg transition-colors">
                     <Edit className="w-4 h-4" />
                   </button>
@@ -123,16 +136,15 @@ export default function LocationsList({ accountId, locations }: LocationsListPro
       )}
 
       {showForm && (
-        <div className="mt-6 p-4 bg-cream-50 rounded-lg border border-navy-200">
-          <p className="text-navy-600 mb-4">
-            Location form will be implemented in the next phase
-          </p>
-          <button
-            onClick={() => setShowForm(false)}
-            className="btn btn-secondary"
-          >
-            Cancel
-          </button>
+        <div className="mt-6 p-6 bg-cream-50 rounded-lg border border-navy-200">
+          <LocationForm
+            accountId={accountId}
+            onSuccess={() => {
+              setShowForm(false);
+              window.location.reload();
+            }}
+            onCancel={() => setShowForm(false)}
+          />
         </div>
       )}
     </div>

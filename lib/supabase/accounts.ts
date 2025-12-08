@@ -1,18 +1,18 @@
 import { createAdminClient } from './admin';
-import type { CorporateAccount, DealStage, AccountStatus } from './types';
+import type { Account, DealStage, AccountStatus } from './types';
 
-export interface CorporateAccountFilters {
+export interface AccountFilters {
   status?: AccountStatus;
   deal_stage?: DealStage;
   industry?: string;
   search?: string;
 }
 
-export async function getCorporateAccounts(
-  filters?: CorporateAccountFilters
-): Promise<CorporateAccount[]> {
+export async function getAccounts(
+  filters?: AccountFilters
+): Promise<Account[]> {
   const supabase = createAdminClient();
-  let query = supabase.from('corporate_accounts').select('*');
+  let query = supabase.from('accounts').select('*');
 
   if (filters?.status) {
     query = query.eq('status', filters.status);
@@ -35,76 +35,82 @@ export async function getCorporateAccounts(
   const { data, error } = await query;
 
   if (error) {
-    console.error('Error fetching corporate accounts:', error);
+    console.error('Error fetching accounts:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+      fullError: error
+    });
     throw error;
   }
 
   return data || [];
 }
 
-export async function getCorporateAccountById(id: string): Promise<CorporateAccount | null> {
+export async function getAccountById(id: string): Promise<Account | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
-    .from('corporate_accounts')
+    .from('accounts')
     .select('*')
     .eq('id', id)
     .single();
 
   if (error) {
-    console.error('Error fetching corporate account:', error);
+    console.error('Error fetching account:', error);
     return null;
   }
 
   return data;
 }
 
-export async function createCorporateAccount(
-  accountData: Omit<CorporateAccount, 'id' | 'created_at' | 'updated_at'>
-): Promise<CorporateAccount | null> {
+export async function createAccount(
+  accountData: Omit<Account, 'id' | 'created_at' | 'updated_at'>
+): Promise<Account | null> {
   const supabase = createAdminClient();
   const { data, error } = await (supabase
-    .from('corporate_accounts') as any)
+    .from('accounts') as any)
     .insert(accountData)
     .select()
     .single();
 
   if (error) {
-    console.error('Error creating corporate account:', error);
+    console.error('Error creating account:', error);
     return null;
   }
 
   return data;
 }
 
-export async function updateCorporateAccount(
+export async function updateAccount(
   id: string,
-  updates: Partial<Omit<CorporateAccount, 'id' | 'created_at' | 'updated_at' | 'created_by'>>
-): Promise<CorporateAccount | null> {
+  updates: Partial<Omit<Account, 'id' | 'created_at' | 'updated_at' | 'created_by'>>
+): Promise<Account | null> {
   const supabase = createAdminClient();
   const { data, error } = await (supabase
-    .from('corporate_accounts') as any)
+    .from('accounts') as any)
     .update(updates)
     .eq('id', id)
     .select()
     .single();
 
   if (error) {
-    console.error('Error updating corporate account:', error);
+    console.error('Error updating account:', error);
     return null;
   }
 
   return data;
 }
 
-export async function deleteCorporateAccount(id: string): Promise<boolean> {
+export async function deleteAccount(id: string): Promise<boolean> {
   const supabase = createAdminClient();
   const { error } = await supabase
-    .from('corporate_accounts')
+    .from('accounts')
     .delete()
     .eq('id', id);
 
   if (error) {
-    console.error('Error deleting corporate account:', error);
+    console.error('Error deleting account:', error);
     return false;
   }
 

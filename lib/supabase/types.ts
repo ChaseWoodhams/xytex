@@ -61,12 +61,13 @@ export interface DonorView {
 // CRM Types
 export type DealStage = 'prospect' | 'qualified' | 'negotiation' | 'closed_won' | 'closed_lost';
 export type AccountStatus = 'active' | 'inactive' | 'archived';
+export type AccountType = 'single_location' | 'multi_location';
 export type LocationStatus = 'active' | 'inactive';
 export type AgreementType = 'partnership' | 'vendor' | 'referral' | 'other';
 export type AgreementStatus = 'draft' | 'active' | 'expired' | 'terminated';
 export type ActivityType = 'call' | 'email' | 'meeting' | 'note' | 'task' | 'other';
 
-export interface CorporateAccount {
+export interface Account {
   id: string;
   name: string;
   website: string | null;
@@ -75,10 +76,25 @@ export interface CorporateAccount {
   annual_revenue: number | null;
   employee_count: number | null;
   status: AccountStatus;
+  account_type: AccountType;
   primary_contact_name: string | null;
   primary_contact_email: string | null;
   primary_contact_phone: string | null;
   notes: string | null;
+  udf_clinic_code: string | null;
+  udf_clinic_name: string | null;
+  udf_shipto_name: string | null;
+  udf_address_line1: string | null;
+  udf_address_line2: string | null;
+  udf_address_line3: string | null;
+  udf_city: string | null;
+  udf_state: string | null;
+  udf_zipcode: string | null;
+  udf_fax: string | null;
+  udf_notes: string | null;
+  udf_phone: string | null;
+  udf_email: string | null;
+  udf_country_code: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -86,7 +102,7 @@ export interface CorporateAccount {
 
 export interface Location {
   id: string;
-  corporate_account_id: string;
+  account_id: string;
   name: string;
   address_line1: string | null;
   address_line2: string | null;
@@ -107,7 +123,7 @@ export interface Location {
 
 export interface Agreement {
   id: string;
-  corporate_account_id: string;
+  account_id: string;
   location_id: string | null;
   agreement_type: AgreementType;
   title: string;
@@ -126,7 +142,7 @@ export interface Agreement {
 
 export interface Activity {
   id: string;
-  corporate_account_id: string;
+  account_id: string;
   location_id: string | null;
   activity_type: ActivityType;
   subject: string;
@@ -139,7 +155,7 @@ export interface Activity {
 
 export interface Note {
   id: string;
-  corporate_account_id: string;
+  account_id: string;
   location_id: string | null;
   title: string | null;
   content: string;
@@ -173,10 +189,10 @@ export interface Database {
         Insert: Omit<DonorView, 'id' | 'viewed_at'>;
         Update: Partial<Omit<DonorView, 'id' | 'viewed_at'>>;
       };
-      corporate_accounts: {
-        Row: CorporateAccount;
-        Insert: Omit<CorporateAccount, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<CorporateAccount, 'id' | 'created_at' | 'updated_at'>>;
+      accounts: {
+        Row: Account;
+        Insert: Omit<Account, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Account, 'id' | 'created_at' | 'updated_at'>>;
       };
       locations: {
         Row: Location;

@@ -1,9 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 import {
-  getCorporateAccountById,
-  updateCorporateAccount,
-  deleteCorporateAccount,
-} from '@/lib/supabase/corporate-accounts';
+  getAccountById,
+  updateAccount,
+  deleteAccount,
+} from '@/lib/supabase/accounts';
 import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
 import { NextResponse } from 'next/server';
@@ -28,7 +28,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const account = await getCorporateAccountById(id);
+    const account = await getAccountById(id);
 
     if (!account) {
       return NextResponse.json({ error: 'Account not found' }, { status: 404 });
@@ -65,7 +65,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const account = await updateCorporateAccount(id, body);
+    const account = await updateAccount(id, body);
 
     if (!account) {
       return NextResponse.json(
@@ -104,7 +104,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const success = await deleteCorporateAccount(id);
+    const success = await deleteAccount(id);
 
     if (!success) {
       return NextResponse.json(

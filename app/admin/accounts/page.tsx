@@ -1,20 +1,57 @@
-import { getCorporateAccounts } from "@/lib/supabase/corporate-accounts";
+import { getAccounts } from "@/lib/supabase/accounts";
+import { getLocationsByAccount } from "@/lib/supabase/locations";
 import Link from "next/link";
 import { Building2, Plus, Search } from "lucide-react";
 import AccountsList from "@/components/admin/AccountsList";
 
 export default async function AccountsPage() {
-  const accounts = await getCorporateAccounts();
+  const accounts = await getAccounts();
+
+  // Get location counts and city/state data for each account
+  const accountsWithLocationCounts = await Promise.all(
+    accounts.map(async (account) => {
+      const locations = await getLocationsByAccount(account.id);
+      const locationCount = locations.length;
+      
+      // Determine if this is a multi-location account based on account_type or location count
+      const isMultiLocation = account.account_type === 'multi_location' || locationCount > 1;
+      
+      // For multi-location accounts, collect all unique city/state combinations
+      let cities: string[] = [];
+      let states: string[] = [];
+      
+      if (isMultiLocation && locationCount > 1) {
+        // Get unique cities and states from locations
+        const citySet = new Set<string>();
+        const stateSet = new Set<string>();
+        
+        locations.forEach((location) => {
+          if (location.city) citySet.add(location.city);
+          if (location.state) stateSet.add(location.state);
+        });
+        
+        cities = Array.from(citySet);
+        states = Array.from(stateSet);
+      }
+      
+      return {
+        ...account,
+        locationCount,
+        locationCities: cities,
+        locationStates: states,
+      };
+    })
+  );
 
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-4xl font-heading font-bold text-navy-900 mb-2">
-            Corporate Accounts
+            Accounts
           </h1>
           <p className="text-navy-600">
-            Manage your corporate clinic accounts and locations
+            Manage your accounts and locations
           </p>
         </div>
         <Link href="/admin/accounts/new" className="btn btn-primary">
@@ -23,7 +60,7 @@ export default async function AccountsPage() {
         </Link>
       </div>
 
-      <AccountsList initialAccounts={accounts} />
+      <AccountsList initialAccounts={accountsWithLocationCounts} />
     </div>
   );
 }

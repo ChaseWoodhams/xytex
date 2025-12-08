@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { LayoutDashboard, Building2, LogOut, User } from "lucide-react";
+import { Building2, LogOut, User } from "lucide-react";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
@@ -18,22 +18,11 @@ export default function AdminSidebar() {
   return (
     <aside className="w-64 bg-navy-900 text-white min-h-screen fixed left-0 top-0">
       <div className="p-6">
-        <Link href="/admin" className="flex items-center gap-2 mb-8">
+        <Link href="/admin/accounts" className="flex items-center gap-2 mb-8">
           <Building2 className="w-6 h-6" />
           <span className="text-xl font-heading font-bold">Xytex CRM</span>
         </Link>
         <nav className="space-y-2">
-          <Link
-            href="/admin"
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              pathname === "/admin"
-                ? "bg-gold-600 text-white"
-                : "hover:bg-navy-800"
-            }`}
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            <span>Dashboard</span>
-          </Link>
           <Link
             href="/admin/accounts"
             className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${

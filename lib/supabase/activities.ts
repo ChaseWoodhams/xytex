@@ -6,7 +6,7 @@ export async function getActivitiesByAccount(accountId: string): Promise<Activit
   const { data, error } = await supabase
     .from('activities')
     .select('*')
-    .eq('corporate_account_id', accountId)
+    .eq('account_id', accountId)
     .order('activity_date', { ascending: false });
 
   if (error) {
@@ -53,7 +53,7 @@ export async function createActivity(
 
 export async function updateActivity(
   id: string,
-  updates: Partial<Omit<Activity, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'corporate_account_id'>>
+  updates: Partial<Omit<Activity, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'account_id'>>
 ): Promise<Activity | null> {
   const supabase = createAdminClient();
   const { data, error } = await (supabase

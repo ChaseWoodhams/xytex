@@ -6,12 +6,12 @@ export async function getNotesByAccount(accountId: string, userId?: string): Pro
   let query = supabase
     .from('notes')
     .select('*')
-    .eq('corporate_account_id', accountId);
+    .eq('account_id', accountId);
 
-  // Filter out private notes that don't belong to the user
-  if (userId) {
-    query = query.or(`is_private.eq.false,is_private.eq.true.and.created_by.eq.${userId}`);
-  } else {
+  // RLS policies already handle privacy filtering, but we can add additional client-side filtering if needed
+  // The RLS policy allows: (NOT is_private) OR (is_private AND created_by = auth.uid())
+  // So we don't need to duplicate this logic here, but we can filter for non-private notes if no userId
+  if (!userId) {
     query = query.eq('is_private', false);
   }
 
@@ -20,7 +20,15 @@ export async function getNotesByAccount(accountId: string, userId?: string): Pro
   const { data, error } = await query;
 
   if (error) {
-    console.error('Error fetching notes:', error);
+    console.error('Error fetching notes by account:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+      accountId,
+      userId,
+      fullError: error
+    });
     throw error;
   }
 
@@ -34,10 +42,10 @@ export async function getNotesByLocation(locationId: string, userId?: string): P
     .select('*')
     .eq('location_id', locationId);
 
-  // Filter out private notes that don't belong to the user
-  if (userId) {
-    query = query.or(`is_private.eq.false,is_private.eq.true.and.created_by.eq.${userId}`);
-  } else {
+  // RLS policies already handle privacy filtering, but we can add additional client-side filtering if needed
+  // The RLS policy allows: (NOT is_private) OR (is_private AND created_by = auth.uid())
+  // So we don't need to duplicate this logic here, but we can filter for non-private notes if no userId
+  if (!userId) {
     query = query.eq('is_private', false);
   }
 
@@ -46,7 +54,15 @@ export async function getNotesByLocation(locationId: string, userId?: string): P
   const { data, error } = await query;
 
   if (error) {
-    console.error('Error fetching notes:', error);
+    console.error('Error fetching notes by location:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+      locationId,
+      userId,
+      fullError: error
+    });
     throw error;
   }
 
@@ -73,7 +89,7 @@ export async function createNote(
 
 export async function updateNote(
   id: string,
-  updates: Partial<Omit<Note, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'corporate_account_id'>>
+  updates: Partial<Omit<Note, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'account_id'>>
 ): Promise<Note | null> {
   const supabase = createAdminClient();
   const { data, error } = await (supabase

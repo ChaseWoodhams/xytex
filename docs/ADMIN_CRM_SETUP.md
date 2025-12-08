@@ -6,7 +6,7 @@ The Business Development CRM has been successfully implemented with database sch
 ## Completed
 
 ✅ Database schema migration applied
-✅ All CRM tables created (corporate_accounts, locations, agreements, activities, notes)
+✅ All CRM tables created (accounts, locations, agreements, activities, notes)
 ✅ User role system implemented
 ✅ RLS policies configured
 ✅ TypeScript types updated
@@ -103,7 +103,7 @@ Or use the Supabase dashboard:
 - Quick actions
 
 ### Accounts Management (`/admin/accounts`)
-- List all corporate accounts
+- List all accounts
 - Search and filter by status, deal stage, industry
 - Create new accounts
 - View account details

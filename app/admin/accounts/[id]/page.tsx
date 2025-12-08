@@ -1,4 +1,4 @@
-import { getCorporateAccountById } from "@/lib/supabase/corporate-accounts";
+import { getAccountById } from "@/lib/supabase/accounts";
 import { getLocationsByAccount } from "@/lib/supabase/locations";
 import { getAgreementsByAccount } from "@/lib/supabase/agreements";
 import { getActivitiesByAccount } from "@/lib/supabase/activities";
@@ -22,7 +22,7 @@ export default async function AccountDetailPage({
     notFound();
   }
 
-  const account = await getCorporateAccountById(id);
+  const account = await getAccountById(id);
   if (!account) {
     notFound();
   }
