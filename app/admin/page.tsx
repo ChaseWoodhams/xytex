@@ -22,7 +22,7 @@ export default async function AdminDashboard() {
   const closedWon = accounts.filter((a) => a.deal_stage === "closed_won").length;
 
   return (
-    <div className="p-8">
+    <div className="p-8 pt-8">
       <div className="mb-8">
         <h1 className="text-4xl font-heading font-bold text-navy-900 mb-2">
           Dashboard

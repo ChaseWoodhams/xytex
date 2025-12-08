@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Playfair_Display, DM_Sans } from "next/font/google";
-import { Header, Footer } from "@/components/layout";
+import ConditionalLayout from "@/components/layout/ConditionalLayout";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import "./globals.css";
 
@@ -53,11 +53,11 @@ export default function RootLayout({
           <a href="#main-content" className="skip-to-content">
             Skip to main content
           </a>
-          <Header />
-          <main id="main-content" tabIndex={-1}>
-            {children}
-          </main>
-          <Footer />
+          <ConditionalLayout>
+            <main id="main-content" tabIndex={-1}>
+              {children}
+            </main>
+          </ConditionalLayout>
         </AuthProvider>
       </body>
     </html>

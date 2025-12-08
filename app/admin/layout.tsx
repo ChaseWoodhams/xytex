@@ -7,7 +7,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="min-h-screen bg-cream-50">
         <div className="flex">
           <AdminSidebar />
-          <main className="flex-1 ml-64">
+          <main className="flex-1 ml-64 pt-0">
             {children}
           </main>
         </div>
