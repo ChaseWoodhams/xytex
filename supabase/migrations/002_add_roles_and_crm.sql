@@ -11,51 +11,92 @@ CREATE TYPE activity_type_enum AS ENUM ('call', 'email', 'meeting', 'note', 'tas
 ALTER TABLE users ADD COLUMN IF NOT EXISTS role user_role_enum DEFAULT 'customer';
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 
--- Create corporate_accounts table
-CREATE TABLE IF NOT EXISTS corporate_accounts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  website TEXT,
-  industry TEXT,
-  deal_stage deal_stage_enum DEFAULT 'prospect',
-  annual_revenue NUMERIC,
-  employee_count INTEGER,
-  status account_status_enum DEFAULT 'active',
-  primary_contact_name TEXT,
-  primary_contact_email TEXT,
-  primary_contact_phone TEXT,
-  notes TEXT,
-  created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- Create corporate_accounts table (or accounts if it's already been renamed)
+-- This migration handles both table names to support different migration orders
+DO $$ 
+BEGIN
+    -- Only create the table if neither corporate_accounts nor accounts exists
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'corporate_accounts')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'accounts') THEN
+        CREATE TABLE corporate_accounts (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          name TEXT NOT NULL,
+          website TEXT,
+          industry TEXT,
+          deal_stage deal_stage_enum DEFAULT 'prospect',
+          annual_revenue NUMERIC,
+          employee_count INTEGER,
+          status account_status_enum DEFAULT 'active',
+          primary_contact_name TEXT,
+          primary_contact_email TEXT,
+          primary_contact_phone TEXT,
+          notes TEXT,
+          created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+    END IF;
+END $$;
 
 -- Create locations table
-CREATE TABLE IF NOT EXISTS locations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  corporate_account_id UUID NOT NULL REFERENCES corporate_accounts(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  address_line1 TEXT,
-  address_line2 TEXT,
-  city TEXT,
-  state TEXT,
-  zip_code TEXT,
-  country TEXT DEFAULT 'USA',
-  phone TEXT,
-  email TEXT,
-  contact_name TEXT,
-  contact_title TEXT,
-  is_primary BOOLEAN DEFAULT FALSE,
-  status location_status_enum DEFAULT 'active',
-  notes TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- Use a function to get the correct table name for foreign key reference
+DO $$ 
+DECLARE
+    accounts_table_name TEXT;
+BEGIN
+    -- Determine which table name to use
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'accounts') THEN
+        accounts_table_name := 'accounts';
+    ELSIF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'corporate_accounts') THEN
+        accounts_table_name := 'corporate_accounts';
+    ELSE
+        accounts_table_name := 'corporate_accounts'; -- Default for new installations
+    END IF;
+    
+    -- Create locations table if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'locations') THEN
+        EXECUTE format('
+            CREATE TABLE locations (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              corporate_account_id UUID NOT NULL REFERENCES %I(id) ON DELETE CASCADE,
+              name TEXT NOT NULL,
+              address_line1 TEXT,
+              address_line2 TEXT,
+              city TEXT,
+              state TEXT,
+              zip_code TEXT,
+              country TEXT DEFAULT ''USA'',
+              phone TEXT,
+              email TEXT,
+              contact_name TEXT,
+              contact_title TEXT,
+              is_primary BOOLEAN DEFAULT FALSE,
+              status location_status_enum DEFAULT ''active'',
+              notes TEXT,
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )', accounts_table_name);
+    END IF;
+END $$;
 
 -- Create agreements table
-CREATE TABLE IF NOT EXISTS agreements (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  corporate_account_id UUID NOT NULL REFERENCES corporate_accounts(id) ON DELETE CASCADE,
+DO $$ 
+DECLARE
+    accounts_table_name TEXT;
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'accounts') THEN
+        accounts_table_name := 'accounts';
+    ELSIF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'corporate_accounts') THEN
+        accounts_table_name := 'corporate_accounts';
+    ELSE
+        accounts_table_name := 'corporate_accounts';
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'agreements') THEN
+        EXECUTE format('
+            CREATE TABLE agreements (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              corporate_account_id UUID NOT NULL REFERENCES %I(id) ON DELETE CASCADE,
   location_id UUID REFERENCES locations(id) ON DELETE CASCADE,
   agreement_type agreement_type_enum NOT NULL,
   title TEXT NOT NULL,
@@ -68,41 +109,92 @@ CREATE TABLE IF NOT EXISTS agreements (
   document_url TEXT,
   notes TEXT,
   created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )', accounts_table_name);
+    END IF;
+END $$;
 
 -- Create activities table
-CREATE TABLE IF NOT EXISTS activities (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  corporate_account_id UUID NOT NULL REFERENCES corporate_accounts(id) ON DELETE CASCADE,
-  location_id UUID REFERENCES locations(id) ON DELETE CASCADE,
-  activity_type activity_type_enum NOT NULL,
-  subject TEXT NOT NULL,
-  description TEXT,
-  activity_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+DO $$ 
+DECLARE
+    accounts_table_name TEXT;
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'accounts') THEN
+        accounts_table_name := 'accounts';
+    ELSIF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'corporate_accounts') THEN
+        accounts_table_name := 'corporate_accounts';
+    ELSE
+        accounts_table_name := 'corporate_accounts';
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'activities') THEN
+        EXECUTE format('
+            CREATE TABLE activities (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              corporate_account_id UUID NOT NULL REFERENCES %I(id) ON DELETE CASCADE,
+              location_id UUID REFERENCES locations(id) ON DELETE CASCADE,
+              activity_type activity_type_enum NOT NULL,
+              subject TEXT NOT NULL,
+              description TEXT,
+              activity_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )', accounts_table_name);
+    END IF;
+END $$;
 
 -- Create notes table
-CREATE TABLE IF NOT EXISTS notes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  corporate_account_id UUID NOT NULL REFERENCES corporate_accounts(id) ON DELETE CASCADE,
-  location_id UUID REFERENCES locations(id) ON DELETE CASCADE,
-  title TEXT,
-  content TEXT NOT NULL,
-  is_private BOOLEAN DEFAULT FALSE,
-  created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+DO $$ 
+DECLARE
+    accounts_table_name TEXT;
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'accounts') THEN
+        accounts_table_name := 'accounts';
+    ELSIF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'corporate_accounts') THEN
+        accounts_table_name := 'corporate_accounts';
+    ELSE
+        accounts_table_name := 'corporate_accounts';
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'notes') THEN
+        EXECUTE format('
+            CREATE TABLE notes (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              corporate_account_id UUID NOT NULL REFERENCES %I(id) ON DELETE CASCADE,
+              location_id UUID REFERENCES locations(id) ON DELETE CASCADE,
+              title TEXT,
+              content TEXT NOT NULL,
+              is_private BOOLEAN DEFAULT FALSE,
+              created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )', accounts_table_name);
+    END IF;
+END $$;
 
 -- Create indexes for better query performance
-CREATE INDEX IF NOT EXISTS idx_corporate_accounts_status ON corporate_accounts(status);
-CREATE INDEX IF NOT EXISTS idx_corporate_accounts_deal_stage ON corporate_accounts(deal_stage);
-CREATE INDEX IF NOT EXISTS idx_corporate_accounts_created_by ON corporate_accounts(created_by);
+DO $$ 
+DECLARE
+    accounts_table_name TEXT;
+BEGIN
+    -- Determine which table name to use
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'accounts') THEN
+        accounts_table_name := 'accounts';
+    ELSIF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'corporate_accounts') THEN
+        accounts_table_name := 'corporate_accounts';
+    ELSE
+        accounts_table_name := 'corporate_accounts';
+    END IF;
+    
+    -- Create indexes on accounts/corporate_accounts table
+    EXECUTE format('CREATE INDEX IF NOT EXISTS idx_corporate_accounts_status ON %I(status)', accounts_table_name);
+    EXECUTE format('CREATE INDEX IF NOT EXISTS idx_corporate_accounts_deal_stage ON %I(deal_stage)', accounts_table_name);
+    EXECUTE format('CREATE INDEX IF NOT EXISTS idx_corporate_accounts_created_by ON %I(created_by)', accounts_table_name);
+END $$;
+
+-- Create indexes on other tables (these don't depend on table name)
 CREATE INDEX IF NOT EXISTS idx_locations_account_id ON locations(corporate_account_id);
 CREATE INDEX IF NOT EXISTS idx_locations_status ON locations(status);
 CREATE INDEX IF NOT EXISTS idx_agreements_account_id ON agreements(corporate_account_id);
@@ -116,49 +208,94 @@ CREATE INDEX IF NOT EXISTS idx_notes_location_id ON notes(location_id);
 CREATE INDEX IF NOT EXISTS idx_notes_created_by ON notes(created_by);
 
 -- Enable Row Level Security
-ALTER TABLE corporate_accounts ENABLE ROW LEVEL SECURITY;
+DO $$ 
+DECLARE
+    accounts_table_name TEXT;
+BEGIN
+    -- Determine which table name to use
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'accounts') THEN
+        accounts_table_name := 'accounts';
+    ELSIF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'corporate_accounts') THEN
+        accounts_table_name := 'corporate_accounts';
+    ELSE
+        accounts_table_name := 'corporate_accounts';
+    END IF;
+    
+    -- Enable RLS on accounts/corporate_accounts
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', accounts_table_name);
+END $$;
+
 ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agreements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies for corporate_accounts
-CREATE POLICY "BD team and admins can view all corporate accounts" ON corporate_accounts
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM users
-      WHERE users.id = auth.uid()
-      AND users.role IN ('bd_team', 'admin')
-    )
-  );
+-- RLS Policies for accounts/corporate_accounts
+DO $$ 
+DECLARE
+    accounts_table_name TEXT;
+BEGIN
+    -- Determine which table name to use
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'accounts') THEN
+        accounts_table_name := 'accounts';
+    ELSIF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'corporate_accounts') THEN
+        accounts_table_name := 'corporate_accounts';
+    ELSE
+        accounts_table_name := 'corporate_accounts';
+    END IF;
+    
+    -- Drop existing policies if they exist (to avoid conflicts)
+    EXECUTE format('DROP POLICY IF EXISTS "BD team and admins can view all corporate accounts" ON %I', accounts_table_name);
+    EXECUTE format('DROP POLICY IF EXISTS "BD team and admins can insert corporate accounts" ON %I', accounts_table_name);
+    EXECUTE format('DROP POLICY IF EXISTS "BD team and admins can update corporate accounts" ON %I', accounts_table_name);
+    EXECUTE format('DROP POLICY IF EXISTS "BD team and admins can delete corporate accounts" ON %I', accounts_table_name);
+    EXECUTE format('DROP POLICY IF EXISTS "BD team and admins can view all accounts" ON %I', accounts_table_name);
+    EXECUTE format('DROP POLICY IF EXISTS "BD team and admins can insert accounts" ON %I', accounts_table_name);
+    EXECUTE format('DROP POLICY IF EXISTS "BD team and admins can update accounts" ON %I', accounts_table_name);
+    EXECUTE format('DROP POLICY IF EXISTS "BD team and admins can delete accounts" ON %I', accounts_table_name);
+    
+    -- Create policies
+    EXECUTE format('
+        CREATE POLICY "BD team and admins can view all accounts" ON %I
+          FOR SELECT USING (
+            EXISTS (
+              SELECT 1 FROM users
+              WHERE users.id = auth.uid()
+              AND users.role IN (''bd_team'', ''admin'')
+            )
+          )', accounts_table_name);
 
-CREATE POLICY "BD team and admins can insert corporate accounts" ON corporate_accounts
-  FOR INSERT WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM users
-      WHERE users.id = auth.uid()
-      AND users.role IN ('bd_team', 'admin')
-    )
-    AND created_by = auth.uid()
-  );
+    EXECUTE format('
+        CREATE POLICY "BD team and admins can insert accounts" ON %I
+          FOR INSERT WITH CHECK (
+            EXISTS (
+              SELECT 1 FROM users
+              WHERE users.id = auth.uid()
+              AND users.role IN (''bd_team'', ''admin'')
+            )
+            AND created_by = auth.uid()
+          )', accounts_table_name);
 
-CREATE POLICY "BD team and admins can update corporate accounts" ON corporate_accounts
-  FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM users
-      WHERE users.id = auth.uid()
-      AND users.role IN ('bd_team', 'admin')
-    )
-  );
+    EXECUTE format('
+        CREATE POLICY "BD team and admins can update accounts" ON %I
+          FOR UPDATE USING (
+            EXISTS (
+              SELECT 1 FROM users
+              WHERE users.id = auth.uid()
+              AND users.role IN (''bd_team'', ''admin'')
+            )
+          )', accounts_table_name);
 
-CREATE POLICY "BD team and admins can delete corporate accounts" ON corporate_accounts
-  FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM users
-      WHERE users.id = auth.uid()
-      AND users.role IN ('bd_team', 'admin')
-    )
-  );
+    EXECUTE format('
+        CREATE POLICY "BD team and admins can delete accounts" ON %I
+          FOR DELETE USING (
+            EXISTS (
+              SELECT 1 FROM users
+              WHERE users.id = auth.uid()
+              AND users.role IN (''bd_team'', ''admin'')
+            )
+          )', accounts_table_name);
+END $$;
 
 -- RLS Policies for locations
 CREATE POLICY "BD team and admins can view all locations" ON locations
@@ -317,8 +454,28 @@ CREATE POLICY "BD team and admins can delete own notes" ON notes
   );
 
 -- Create triggers for updated_at
-CREATE TRIGGER update_corporate_accounts_updated_at BEFORE UPDATE ON corporate_accounts
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$ 
+DECLARE
+    accounts_table_name TEXT;
+BEGIN
+    -- Determine which table name to use
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'accounts') THEN
+        accounts_table_name := 'accounts';
+    ELSIF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'corporate_accounts') THEN
+        accounts_table_name := 'corporate_accounts';
+    ELSE
+        accounts_table_name := 'corporate_accounts';
+    END IF;
+    
+    -- Drop old trigger if it exists
+    EXECUTE format('DROP TRIGGER IF EXISTS update_corporate_accounts_updated_at ON %I', accounts_table_name);
+    EXECUTE format('DROP TRIGGER IF EXISTS update_accounts_updated_at ON %I', accounts_table_name);
+    
+    -- Create trigger on accounts/corporate_accounts
+    EXECUTE format('
+        CREATE TRIGGER update_accounts_updated_at BEFORE UPDATE ON %I
+          FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()', accounts_table_name);
+END $$;
 
 CREATE TRIGGER update_locations_updated_at BEFORE UPDATE ON locations
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

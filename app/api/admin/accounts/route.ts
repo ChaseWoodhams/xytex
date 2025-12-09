@@ -101,7 +101,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Error creating account:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error.message || 'Internal server error' },
       { status: 500 }
     );
   }

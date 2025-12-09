@@ -68,15 +68,26 @@ export async function createAccount(
   accountData: Omit<Account, 'id' | 'created_at' | 'updated_at'>
 ): Promise<Account | null> {
   const supabase = createAdminClient();
+  
+  // Remove deal_stage as it was removed from the database schema
+  // Keep account_type as it should exist (migration 010 adds it)
+  const { deal_stage, ...dbAccountData } = accountData;
+  
   const { data, error } = await (supabase
     .from('accounts') as any)
-    .insert(accountData)
+    .insert(dbAccountData)
     .select()
     .single();
 
   if (error) {
-    console.error('Error creating account:', error);
-    return null;
+    console.error('Error creating account:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+      fullError: error
+    });
+    throw new Error(error.message || 'Failed to create account');
   }
 
   return data;

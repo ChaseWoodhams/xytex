@@ -39,23 +39,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', authUser.id)
         .single();
 
-      const timeoutPromise = new Promise((_, reject) =>
+      const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
       );
 
-      const { data, error } = await Promise.race([
-        profilePromise,
-        timeoutPromise,
-      ]) as any;
+      try {
+        const result = await Promise.race([
+          profilePromise,
+          timeoutPromise,
+        ]);
 
-      if (error) {
-        console.error('Error fetching user profile:', error);
+        if (result.error) {
+          console.error('Error fetching user profile:', result.error);
+          setUserProfile(null);
+        } else {
+          setUserProfile(result.data);
+        }
+      } catch (raceError) {
+        // Handle timeout or other race errors
+        if (raceError instanceof Error) {
+          console.error('Error fetching user profile:', raceError.message);
+        } else {
+          console.error('Error fetching user profile:', raceError);
+        }
         setUserProfile(null);
-      } else {
-        setUserProfile(data);
       }
-    } catch (error: any) {
-      console.error('Error fetching user profile:', error);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error fetching user profile:', errorMessage || error);
       // Don't block auth if profile fetch fails - user can still be authenticated
       setUserProfile(null);
     }

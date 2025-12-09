@@ -58,6 +58,19 @@ export interface DonorView {
   viewed_at: string;
 }
 
+export interface Invitation {
+  id: string;
+  email: string;
+  role: UserRole;
+  invited_by: string;
+  token: string;
+  status: 'pending' | 'accepted' | 'expired' | 'cancelled';
+  expires_at: string;
+  accepted_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // CRM Types
 export type DealStage = 'prospect' | 'qualified' | 'negotiation' | 'closed_won' | 'closed_lost';
 export type AccountStatus = 'active' | 'inactive' | 'archived';

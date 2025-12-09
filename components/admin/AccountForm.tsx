@@ -48,8 +48,19 @@ export default function AccountForm({ account }: AccountFormProps) {
     setError(null);
 
     try {
+      // Normalize website URL - add https:// if missing but value provided
+      let website = formData.website?.trim() || null;
+      if (website && !website.match(/^https?:\/\//i)) {
+        website = `https://${website}`;
+      }
+      // Set to null if empty string
+      if (website === '') {
+        website = null;
+      }
+
       const payload = {
         ...formData,
+        website,
         annual_revenue: formData.annual_revenue ? parseFloat(formData.annual_revenue) : null,
         employee_count: formData.employee_count ? parseInt(formData.employee_count) : null,
       };
@@ -131,11 +142,15 @@ export default function AccountForm({ account }: AccountFormProps) {
           </label>
           <input
             id="website"
-            type="url"
+            type="text"
+            placeholder="https://example.com"
             value={formData.website}
             onChange={(e) => setFormData({ ...formData, website: e.target.value })}
             className="w-full px-4 py-2 border border-navy-200 rounded-lg focus:ring-2 focus:ring-gold-500 focus:border-gold-500 outline-none"
           />
+          <p className="mt-1 text-xs text-navy-500">
+            Optional - Include http:// or https://
+          </p>
         </div>
 
         <div>

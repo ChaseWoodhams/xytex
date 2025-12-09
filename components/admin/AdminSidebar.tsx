@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { Building2, LogOut, User } from "lucide-react";
+import { Building2, LogOut, User, UserPlus } from "lucide-react";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
@@ -33,6 +33,17 @@ export default function AdminSidebar() {
           >
             <Building2 className="w-5 h-5" />
             <span>Accounts</span>
+          </Link>
+          <Link
+            href="/admin/invitations"
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              pathname?.startsWith("/admin/invitations")
+                ? "bg-gold-600 text-white"
+                : "hover:bg-navy-800"
+            }`}
+          >
+            <UserPlus className="w-5 h-5" />
+            <span>Invitations</span>
           </Link>
         </nav>
       </div>

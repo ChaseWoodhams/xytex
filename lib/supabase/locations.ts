@@ -11,8 +11,21 @@ export async function getLocationsByAccount(accountId: string): Promise<Location
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Error fetching locations:', error);
-    throw error;
+    const errorDetails = {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+      fullError: JSON.stringify(error, Object.getOwnPropertyNames(error))
+    };
+    console.error('Error fetching locations:', errorDetails);
+    // Create a new error with more details to ensure it serializes properly
+    const enhancedError = new Error(
+      `Failed to fetch locations for account ${accountId}: ${error.message || 'Unknown error'}`
+    );
+    (enhancedError as any).originalError = error;
+    (enhancedError as any).code = error.code;
+    throw enhancedError;
   }
 
   return data || [];
