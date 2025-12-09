@@ -1,5 +1,6 @@
 import { getAccounts } from "@/lib/supabase/accounts";
 import { getLocationsByAccount } from "@/lib/supabase/locations";
+import type { Location } from "@/lib/supabase/types";
 import Link from "next/link";
 import { Building2, Plus, Search } from "lucide-react";
 import AccountsList from "@/components/admin/AccountsList";
@@ -11,7 +12,7 @@ export default async function AccountsPage() {
   // Get location counts and city/state data for each account
   const accountsWithLocationCounts = await Promise.all(
     accounts.map(async (account) => {
-      let locations = [];
+      let locations: Location[] = [];
       try {
         locations = await getLocationsByAccount(account.id);
       } catch (error) {
