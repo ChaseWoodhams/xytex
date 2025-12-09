@@ -20,16 +20,23 @@ export async function getNotesByAccount(accountId: string, userId?: string): Pro
   const { data, error } = await query;
 
   if (error) {
-    console.error('Error fetching notes by account:', {
+    const errorDetails = {
       message: error.message,
       details: error.details,
       hint: error.hint,
       code: error.code,
       accountId,
       userId,
-      fullError: error
-    });
-    throw error;
+      fullError: JSON.stringify(error, Object.getOwnPropertyNames(error))
+    };
+    console.error('Error fetching notes by account:', errorDetails);
+    // Create a new error with more details to ensure it serializes properly
+    const enhancedError = new Error(
+      `Failed to fetch notes for account ${accountId}: ${error.message || 'Unknown error'}`
+    );
+    (enhancedError as any).originalError = error;
+    (enhancedError as any).code = error.code;
+    throw enhancedError;
   }
 
   return data || [];
@@ -54,16 +61,23 @@ export async function getNotesByLocation(locationId: string, userId?: string): P
   const { data, error } = await query;
 
   if (error) {
-    console.error('Error fetching notes by location:', {
+    const errorDetails = {
       message: error.message,
       details: error.details,
       hint: error.hint,
       code: error.code,
       locationId,
       userId,
-      fullError: error
-    });
-    throw error;
+      fullError: JSON.stringify(error, Object.getOwnPropertyNames(error))
+    };
+    console.error('Error fetching notes by location:', errorDetails);
+    // Create a new error with more details to ensure it serializes properly
+    const enhancedError = new Error(
+      `Failed to fetch notes for location ${locationId}: ${error.message || 'Unknown error'}`
+    );
+    (enhancedError as any).originalError = error;
+    (enhancedError as any).code = error.code;
+    throw enhancedError;
   }
 
   return data || [];
