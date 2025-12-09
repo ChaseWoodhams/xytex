@@ -1,19 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { canAccessAdmin } from "@/lib/utils/roles";
 
 export default function AdminRoute({ children }: { children: React.ReactNode }) {
   const { userProfile, loading } = useAuth();
-  const router = useRouter();
 
-  useEffect(() => {
-    if (!loading && (!userProfile || !canAccessAdmin(userProfile))) {
-      router.push("/account");
-    }
-  }, [userProfile, loading, router]);
+  // Don't redirect here - let middleware handle route protection
+  // This component just shows/hides content based on auth state
+  // Redirects are handled by middleware to prevent refresh issues
 
   if (loading) {
     return (
@@ -27,6 +22,8 @@ export default function AdminRoute({ children }: { children: React.ReactNode }) 
   }
 
   if (!userProfile || !canAccessAdmin(userProfile)) {
+    // Return null instead of redirecting - middleware will handle the redirect
+    // This prevents double redirects and refresh issues
     return null;
   }
 

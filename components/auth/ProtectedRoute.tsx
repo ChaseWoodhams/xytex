@@ -1,18 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  const router = useRouter();
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
-  }, [user, loading, router]);
+  // Don't redirect here - let middleware handle route protection
+  // This component just shows/hides content based on auth state
+  // Redirects are handled by middleware to prevent refresh issues
 
   if (loading) {
     return (
@@ -26,6 +21,8 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   }
 
   if (!user) {
+    // Return null instead of redirecting - middleware will handle the redirect
+    // This prevents double redirects and refresh issues
     return null;
   }
 
