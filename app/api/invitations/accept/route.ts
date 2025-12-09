@@ -74,8 +74,8 @@ export async function POST(request: Request) {
     const userProfile = await createUserProfile(
       authData.user.id,
       invitation.email,
-      fullName || null,
-      null,
+      fullName || undefined,
+      undefined,
       invitation.role
     );
 
