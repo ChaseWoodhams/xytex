@@ -3,16 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Location } from "@/lib/supabase/types";
+import type { Location, Agreement } from "@/lib/supabase/types";
 import { MapPin, Plus, Edit, Trash2 } from "lucide-react";
 import LocationForm from "./LocationForm";
+import { getLocationAgreementStatus } from "@/lib/supabase/agreements";
 
 interface LocationsListProps {
   accountId: string;
   locations: Location[];
+  locationAgreementsMap: Map<string, Agreement[]>;
 }
 
-export default function LocationsList({ accountId, locations }: LocationsListProps) {
+export default function LocationsList({ accountId, locations, locationAgreementsMap }: LocationsListProps) {
   const [showForm, setShowForm] = useState(false);
   const router = useRouter();
 
@@ -41,39 +43,64 @@ export default function LocationsList({ accountId, locations }: LocationsListPro
         </div>
       ) : (
         <div className="space-y-4">
-          {locations.map((location) => (
-            <div
-              key={location.id}
-              className="border border-navy-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start justify-between">
-                <div
-                  className="flex-1 cursor-pointer"
-                  onClick={() => router.push(`/admin/locations/${location.id}`)}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Link
-                      href={`/admin/locations/${location.id}`}
-                      className="text-lg font-heading font-semibold text-navy-900 hover:text-gold-600"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {location.name}
-                    </Link>
-                    {location.is_primary && (
-                      <span className="px-2 py-1 text-xs font-semibold bg-gold-100 text-gold-800 rounded-full">
-                        Primary
+          {locations.map((location) => {
+            const locAgreements = locationAgreementsMap.get(location.id) || [];
+            const agreementStatus = getLocationAgreementStatus(locAgreements);
+            return (
+              <div
+                key={location.id}
+                className="border border-navy-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-start justify-between">
+                  <div
+                    className="flex-1 cursor-pointer"
+                    onClick={() => router.push(`/admin/locations/${location.id}`)}
+                  >
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <Link
+                        href={`/admin/locations/${location.id}`}
+                        className="text-lg font-heading font-semibold text-navy-900 hover:text-gold-600"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {location.name}
+                      </Link>
+                      {location.is_primary && (
+                        <span className="px-2 py-1 text-xs font-semibold bg-gold-100 text-gold-800 rounded-full">
+                          Primary
+                        </span>
+                      )}
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          location.status === "active"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {location.status}
                       </span>
-                    )}
-                    <span
-                      className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        location.status === "active"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {location.status}
-                    </span>
-                  </div>
+                      {/* Agreement Status Badge */}
+                      {agreementStatus.status === 'active' && (
+                        <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">
+                          Active Contract
+                          {agreementStatus.activeCount > 1 && ` (${agreementStatus.activeCount})`}
+                        </span>
+                      )}
+                      {agreementStatus.status === 'expired' && (
+                        <span className="px-2 py-1 text-xs font-semibold bg-orange-100 text-orange-800 rounded-full">
+                          Expired Contract
+                        </span>
+                      )}
+                      {agreementStatus.status === 'draft' && (
+                        <span className="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full">
+                          Draft Contract
+                        </span>
+                      )}
+                      {agreementStatus.status === 'none' && (
+                        <span className="px-2 py-1 text-xs font-semibold bg-gray-100 text-gray-600 rounded-full">
+                          No Contract
+                        </span>
+                      )}
+                    </div>
                   <div className="text-sm text-navy-600 space-y-1">
                     {location.address_line1 && (
                       <p>
@@ -117,21 +144,22 @@ export default function LocationsList({ accountId, locations }: LocationsListPro
                       </p>
                     )}
                   </div>
-                  {location.notes && (
-                    <p className="mt-2 text-sm text-navy-600">{location.notes}</p>
-                  )}
-                </div>
-                <div className="flex gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
-                  <button className="p-2 text-navy-600 hover:text-gold-600 hover:bg-gold-50 rounded-lg transition-colors">
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <button className="p-2 text-navy-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                    {location.notes && (
+                      <p className="mt-2 text-sm text-navy-600">{location.notes}</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
+                    <button className="p-2 text-navy-600 hover:text-gold-600 hover:bg-gold-50 rounded-lg transition-colors">
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button className="p-2 text-navy-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

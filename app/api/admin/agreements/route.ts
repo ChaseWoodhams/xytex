@@ -21,6 +21,15 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
+    
+    // Validate that location_id is provided - agreements must be tied to locations only
+    if (!body.location_id) {
+      return NextResponse.json(
+        { error: 'location_id is required. Agreements can only be created for locations, not accounts.' },
+        { status: 400 }
+      );
+    }
+
     const agreementData = {
       ...body,
       created_by: user.id,
@@ -36,10 +45,11 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(agreement, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating agreement:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
