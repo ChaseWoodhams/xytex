@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Mail, Lock, User, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
-export default function AcceptInvitationPage() {
+function AcceptInvitationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -272,6 +272,23 @@ export default function AcceptInvitationPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AcceptInvitationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-subtle">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-gold-600 mx-auto mb-4" />
+            <p className="text-navy-600">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <AcceptInvitationContent />
+    </Suspense>
   );
 }
 
