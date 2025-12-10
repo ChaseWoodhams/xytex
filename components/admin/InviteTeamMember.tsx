@@ -43,6 +43,16 @@ export default function InviteTeamMember({ onInviteSent }: InviteTeamMemberProps
         return;
       }
 
+      // Check if email was actually sent
+      if (data.emailSent === false || data.emailError) {
+        setError(
+          data.emailError || 
+          "Invitation was created but the email failed to send. You can resend it from the invitations list."
+        );
+        setLoading(false);
+        return;
+      }
+
       setSuccess(true);
       setEmail("");
       setRole("bd_team");
@@ -114,10 +124,10 @@ export default function InviteTeamMember({ onInviteSent }: InviteTeamMemberProps
           <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-green-800">
-              Invitation sent successfully!
+              Invitation created and email sent successfully!
             </p>
             <p className="text-sm text-green-700 mt-1">
-              An invitation email has been sent to {email}
+              An invitation email with the signup link has been sent to {email}
             </p>
           </div>
         </div>

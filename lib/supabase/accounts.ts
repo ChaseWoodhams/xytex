@@ -223,15 +223,48 @@ export async function updateAccount(
 
 export async function deleteAccount(id: string): Promise<boolean> {
   const supabase = createAdminClient();
-  const { error } = await supabase
+  
+  // First, verify the account exists
+  const { data: existingAccount, error: fetchError } = await supabase
     .from('accounts')
-    .delete()
-    .eq('id', id);
+    .select('id')
+    .eq('id', id)
+    .single();
 
-  if (error) {
-    console.error('Error deleting account:', error);
+  if (fetchError) {
+    console.error('Error fetching account before deletion:', fetchError);
     return false;
   }
 
+  if (!existingAccount) {
+    console.error(`Account with id ${id} not found`);
+    return false;
+  }
+
+  // Delete the account and return the deleted row to verify deletion
+  const { data: deletedData, error } = await supabase
+    .from('accounts')
+    .delete()
+    .eq('id', id)
+    .select();
+
+  if (error) {
+    console.error('Error deleting account:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+      fullError: error
+    });
+    return false;
+  }
+
+  // Verify that a row was actually deleted
+  if (!deletedData || deletedData.length === 0) {
+    console.error(`Failed to delete account ${id}: No rows were deleted`);
+    return false;
+  }
+
+  console.log(`Successfully deleted account ${id}`);
   return true;
 }

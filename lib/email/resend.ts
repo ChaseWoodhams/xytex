@@ -127,13 +127,18 @@ export async function sendInvitationEmail(data: InvitationEmailData) {
                 </tr>
               </table>
               
-              <!-- Link fallback -->
-              <p style="margin: 32px 0 0; color: #64748b; font-size: 14px; line-height: 1.6;">
-                Or copy and paste this link into your browser:
-              </p>
-              <p style="margin: 8px 0 0; word-break: break-all;">
-                <a href="${inviteLink}" style="color: #3b82f6; text-decoration: none; font-size: 14px;">${inviteLink}</a>
-              </p>
+              <!-- Link fallback - More prominent -->
+              <div style="margin: 32px 0 0; padding: 20px; background-color: #f1f5f9; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <p style="margin: 0 0 12px; color: #475569; font-size: 14px; font-weight: 600;">
+                  Your Invitation Link:
+                </p>
+                <p style="margin: 0; word-break: break-all;">
+                  <a href="${inviteLink}" style="color: #3b82f6; text-decoration: none; font-size: 15px; font-weight: 500;">${inviteLink}</a>
+                </p>
+                <p style="margin: 12px 0 0; color: #64748b; font-size: 13px; line-height: 1.5;">
+                  If the button above doesn't work, copy and paste this link into your browser.
+                </p>
+              </div>
               
               <!-- Expiry notice -->
               <div style="margin-top: 32px; padding: 16px; background-color: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
@@ -168,8 +173,12 @@ You're Invited to Join Xytex!
 
 ${invitedByName ? `${invitedByName} has invited you` : 'You have been invited'} to join the Xytex team as a ${roleDisplay}.
 
-Click the link below to create your account and get started:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+YOUR INVITATION LINK:
 ${inviteLink}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Click the link above to create your account and get started.
 
 Note: This invitation expires on ${expiryDate}.
 
