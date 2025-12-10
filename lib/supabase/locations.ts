@@ -257,7 +257,6 @@ export async function uploadLocationAgreementDocument(
         filePath,
         fileName: uniqueFileName,
         error: uploadError.message,
-        statusCode: uploadError.statusCode,
         errorDetails: uploadError
       });
       
