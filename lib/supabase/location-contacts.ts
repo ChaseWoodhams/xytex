@@ -57,8 +57,8 @@ export async function createLocationContact(
       .eq('is_primary', true);
   }
 
-  const { data, error } = await supabase
-    .from('location_contacts')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('location_contacts') as any)
     .insert(contactData)
     .select()
     .single();
@@ -93,8 +93,8 @@ export async function updateLocationContact(
     }
   }
 
-  const { data, error } = await supabase
-    .from('location_contacts')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('location_contacts') as any)
     .update(updates)
     .eq('id', id)
     .select()
