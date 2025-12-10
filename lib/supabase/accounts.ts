@@ -68,9 +68,9 @@ export async function createAccount(
 ): Promise<Account | null> {
   const supabase = createAdminClient();
   
-  // Remove deal_stage as it was removed from the database schema
+  // deal_stage was removed from the database schema, so we don't need to destructure it
   // Keep account_type as it should exist (migration 010 adds it)
-  const { deal_stage, ...dbAccountData } = accountData;
+  const dbAccountData = accountData;
   
   const { data, error } = await (supabase
     .from('accounts') as any)
@@ -169,7 +169,7 @@ export async function updateAccount(
       // Use dynamic import to avoid circular dependency
       const { getLocationsByAccount } = await import('./locations');
       const existingLocations = await getLocationsByAccount(id);
-      const primaryLocation = existingLocations.find((loc: { is_primary: boolean }) => loc.is_primary) || existingLocations[0];
+      const primaryLocation = existingLocations.find(loc => loc.is_primary) || existingLocations[0];
       
       if (primaryLocation) {
         // Update the existing location with account data
