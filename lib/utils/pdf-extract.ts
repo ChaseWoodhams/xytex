@@ -25,7 +25,7 @@ export async function extractPdfMetadata(file: File | Buffer): Promise<Extracted
     console.log('PDF extraction - Starting with pdf2json, data size:', buffer.length, 'bytes');
 
     return new Promise((resolve) => {
-      const pdfParser = new PDFParser(null, 1);
+      const pdfParser = new PDFParser(null, true); // Second parameter is verbosity (boolean)
       let text = '';
 
       pdfParser.on('pdfParser_dataError', (errData: any) => {
