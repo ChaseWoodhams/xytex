@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { Location, Agreement } from "@/lib/supabase/types";
 import { MapPin, Plus, Edit, Trash2 } from "lucide-react";
 import LocationForm from "./LocationForm";
+import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
 import { getLocationAgreementStatus } from "@/lib/supabase/agreements";
 
 interface LocationsListProps {
@@ -16,6 +17,8 @@ interface LocationsListProps {
 
 export default function LocationsList({ accountId, locations, locationAgreementsMap }: LocationsListProps) {
   const [showForm, setShowForm] = useState(false);
+  const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
 
   return (
@@ -149,10 +152,20 @@ export default function LocationsList({ accountId, locations, locationAgreements
                     )}
                   </div>
                   <div className="flex gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
-                    <button className="p-2 text-navy-600 hover:text-gold-600 hover:bg-gold-50 rounded-lg transition-colors">
+                    <Link
+                      href={`/admin/locations/${location.id}`}
+                      className="p-2 text-navy-600 hover:text-gold-600 hover:bg-gold-50 rounded-lg transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Edit className="w-4 h-4" />
-                    </button>
-                    <button className="p-2 text-navy-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    </Link>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteLocationId(location.id);
+                      }}
+                      className="p-2 text-navy-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -174,6 +187,38 @@ export default function LocationsList({ accountId, locations, locationAgreements
             onCancel={() => setShowForm(false)}
           />
         </div>
+      )}
+
+      {deleteLocationId && (
+        <DeleteConfirmationDialog
+          isOpen={!!deleteLocationId}
+          onClose={() => setDeleteLocationId(null)}
+          onConfirm={async () => {
+            setIsDeleting(true);
+            try {
+              const response = await fetch(`/api/admin/locations/${deleteLocationId}`, {
+                method: 'DELETE',
+              });
+
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to delete location');
+              }
+
+              // Reload the page to update the locations list
+              window.location.reload();
+            } catch (error: any) {
+              console.error('Error deleting location:', error);
+              alert(`Failed to delete location: ${error.message}`);
+              setIsDeleting(false);
+              setDeleteLocationId(null);
+            }
+          }}
+          title="Delete Location"
+          message="Are you sure you want to delete this location? This will also delete all associated agreements."
+          itemName={locations.find(l => l.id === deleteLocationId)?.name || 'this location'}
+          isLoading={isDeleting}
+        />
       )}
     </div>
   );

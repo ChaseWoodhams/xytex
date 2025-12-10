@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type {
   Account,
@@ -9,12 +10,13 @@ import type {
   Activity,
   Note,
 } from "@/lib/supabase/types";
-import { ArrowLeft, Building2, MapPin, FileText, Clock, StickyNote, Plus, Phone, Mail } from "lucide-react";
+import { ArrowLeft, Building2, MapPin, FileText, Clock, StickyNote, Plus, Phone, Mail, Trash2 } from "lucide-react";
 import LocationsList from "./LocationsList";
 import AgreementsList from "./AgreementsList";
 import ActivitiesTimeline from "./ActivitiesTimeline";
 import NotesSection from "./NotesSection";
 import NetworkDashboard from "./NetworkDashboard";
+import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
 import { getLocationAgreementStatus } from "@/lib/supabase/agreements";
 
 interface AccountDetailViewProps {
@@ -36,8 +38,11 @@ export default function AccountDetailView({
   notes,
   currentUserId,
 }: AccountDetailViewProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"overview" | "locations" | "agreements" | "activities" | "notes">("overview");
   const [locationFilter, setLocationFilter] = useState<'all' | 'needs_contract' | 'active' | 'expired' | 'draft'>('all');
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Determine if this is a multi-location account based on account_type or actual location count
   const isMultiLocation = account.account_type === 'multi_location' || locations.length > 1;
@@ -63,6 +68,28 @@ export default function AccountDetailView({
     }
   }, [activeTab, isMultiLocation, locations.length]);
 
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/admin/accounts/${account.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete account');
+      }
+
+      // Redirect to accounts list after successful deletion
+      router.push('/admin/accounts');
+      router.refresh();
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      alert(`Failed to delete account: ${error.message}`);
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="p-8">
       <Link
@@ -74,10 +101,11 @@ export default function AccountDetailView({
       </Link>
 
       <div className="mb-6">
-        <div className="flex items-center gap-4 mb-4">
-          <h1 className="text-4xl font-heading font-bold text-navy-900">
-            {account.name}
-          </h1>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <h1 className="text-4xl font-heading font-bold text-navy-900">
+              {account.name}
+            </h1>
           {/* Organization Type Badge */}
           <span
             className={`px-3 py-1 text-sm font-semibold rounded-full ${
@@ -88,6 +116,14 @@ export default function AccountDetailView({
           >
             {isMultiLocation ? "Multi-Location Organization" : "Single Location"}
           </span>
+          </div>
+          <button
+            onClick={() => setShowDeleteDialog(true)}
+            className="px-4 py-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete Account
+          </button>
         </div>
         {/* Additional Information fields */}
         {(account.sage_code || account.udf_clinic_name || account.udf_shipto_name || account.udf_country_code) && (
@@ -664,6 +700,16 @@ export default function AccountDetailView({
           />
         )}
       </div>
+
+      <DeleteConfirmationDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDeleteAccount}
+        title="Delete Account"
+        message="Are you sure you want to delete this account? This will also delete all associated locations, agreements, activities, and notes."
+        itemName={account.name}
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

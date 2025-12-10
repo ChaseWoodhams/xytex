@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Location, Account, Agreement } from "@/lib/supabase/types";
-import { ArrowLeft, MapPin, Building2, FileText } from "lucide-react";
+import { ArrowLeft, MapPin, Building2, FileText, Trash2 } from "lucide-react";
 import AgreementsList from "./AgreementsList";
+import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
 
 interface LocationDetailViewProps {
   location: Location;
@@ -19,7 +21,10 @@ export default function LocationDetailView({
   agreements,
   isMultiLocation,
 }: LocationDetailViewProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"overview" | "agreements">("overview");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Only show agreements tab if this is a multi-location account
   // Use account_type or fallback to isMultiLocation flag
@@ -40,9 +45,18 @@ export default function LocationDetailView({
       </Link>
 
       <div className="mb-6">
-        <h1 className="text-4xl font-heading font-bold text-navy-900 mb-2">
-          {location.name}
-        </h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-4xl font-heading font-bold text-navy-900">
+            {location.name}
+          </h1>
+          <button
+            onClick={() => setShowDeleteDialog(true)}
+            className="px-4 py-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete Location
+          </button>
+        </div>
         <div className="flex items-center gap-4">
           {location.is_primary && (
             <span className="px-3 py-1 text-sm font-semibold bg-gold-100 text-gold-800 rounded-full">
@@ -343,6 +357,36 @@ export default function LocationDetailView({
           />
         )}
       </div>
+
+      <DeleteConfirmationDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={async () => {
+          setIsDeleting(true);
+          try {
+            const response = await fetch(`/api/admin/locations/${location.id}`, {
+              method: 'DELETE',
+            });
+
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.error || 'Failed to delete location');
+            }
+
+            // Redirect to account page after successful deletion
+            router.push(`/admin/accounts/${account.id}`);
+            router.refresh();
+          } catch (error: any) {
+            console.error('Error deleting location:', error);
+            alert(`Failed to delete location: ${error.message}`);
+            setIsDeleting(false);
+          }
+        }}
+        title="Delete Location"
+        message="Are you sure you want to delete this location? This will also delete all associated agreements."
+        itemName={location.name}
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

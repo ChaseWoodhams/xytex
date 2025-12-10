@@ -174,6 +174,15 @@ export async function updateLocation(
 
 export async function deleteLocation(id: string): Promise<boolean> {
   const supabase = createAdminClient();
+  
+  // Get the location first to check account_id
+  const location = await getLocationById(id);
+  if (!location) {
+    console.error('Location not found:', id);
+    return false;
+  }
+
+  // Delete the location
   const { error } = await supabase
     .from('locations')
     .delete()
@@ -183,6 +192,15 @@ export async function deleteLocation(id: string): Promise<boolean> {
     console.error('Error deleting location:', error);
     return false;
   }
+
+  // Check if this was the last location for the account
+  // If so, we might want to handle account type, but for now we'll leave it
+  // The account type can be manually updated if needed
+  const remainingLocations = await getLocationsByAccount(location.account_id);
+  
+  // If no locations remain and account is multi_location, we could convert it to single_location
+  // But we'll leave this as-is to avoid breaking existing data
+  // The account type can be manually updated if needed
 
   return true;
 }
