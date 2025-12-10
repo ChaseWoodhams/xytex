@@ -36,6 +36,8 @@ export default async function AccountsPage() {
       let cities: string[] = [];
       let states: string[] = [];
       const countries = new Set<string>();
+      const addresses: string[] = [];
+      const zipCodes: string[] = [];
       
       // Collect countries from all locations (for both single and multi-location accounts)
       locations.forEach((location) => {
@@ -51,17 +53,23 @@ export default async function AccountsPage() {
       }
       
       if (isMultiLocation && locationCount > 1) {
-        // Get unique cities and states from locations
+        // Get unique cities, states, addresses, and zip codes from locations
         const citySet = new Set<string>();
         const stateSet = new Set<string>();
+        const addressSet = new Set<string>();
+        const zipSet = new Set<string>();
         
         locations.forEach((location) => {
           if (location.city) citySet.add(location.city);
           if (location.state) stateSet.add(location.state);
+          if (location.address_line1) addressSet.add(location.address_line1);
+          if (location.zip_code) zipSet.add(location.zip_code);
         });
         
         cities = Array.from(citySet);
         states = Array.from(stateSet);
+        addresses.push(...Array.from(addressSet));
+        zipCodes.push(...Array.from(zipSet));
       }
       
       return {
@@ -70,6 +78,8 @@ export default async function AccountsPage() {
         locationCities: cities,
         locationStates: states,
         locationCountries: Array.from(countries),
+        locationAddresses: addresses,
+        locationZipCodes: zipCodes,
       };
     })
   );

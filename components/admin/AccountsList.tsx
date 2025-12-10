@@ -10,6 +10,8 @@ interface AccountWithLocationCount extends Account {
   locationCities?: string[];
   locationStates?: string[];
   locationCountries?: string[];
+  locationAddresses?: string[];
+  locationZipCodes?: string[];
 }
 
 interface AccountsListProps {
@@ -52,21 +54,34 @@ function accountMatchesCountryFilter(
 ): boolean {
   if (filter === 'ALL') return true;
   
-  let countries = account.locationCountries || [];
+  // For single-location accounts, prioritize account's country code
+  // as it's more reliable than location data which might be incorrect
+  const isSingleLocation = !account.account_type || 
+    account.account_type === 'single_location' || 
+    (account.locationCount !== undefined && account.locationCount <= 1);
   
-  // For single-location accounts, also check account's country code
-  if (!account.locationCountries || account.locationCountries.length === 0) {
-    if (account.udf_country_code) {
-      countries = [account.udf_country_code];
+  // If account has a country code, use it first (most reliable)
+  if (account.udf_country_code && account.udf_country_code.trim()) {
+    const normalizedAccountCountry = normalizeCountry(account.udf_country_code.trim());
+    if (normalizedAccountCountry === filter) {
+      return true;
+    }
+    // For single-location accounts, only use account country code
+    if (isSingleLocation) {
+      return false;
     }
   }
   
-  // Normalize all countries and check if any match the filter
-  const normalizedCountries = countries
-    .map(country => normalizeCountry(country))
-    .filter((country): country is CountryFilter => country !== null);
+  // For multi-location accounts or when account country doesn't match, check location countries
+  if (account.locationCountries && account.locationCountries.length > 0) {
+    const normalizedLocationCountries = account.locationCountries
+      .map(country => country ? normalizeCountry(country.trim()) : null)
+      .filter((country): country is CountryFilter => country !== null);
+    
+    return normalizedLocationCountries.some(country => country === filter);
+  }
   
-  return normalizedCountries.some(country => country === filter);
+  return false;
 }
 
 export default function AccountsList({ initialAccounts }: AccountsListProps) {
@@ -167,82 +182,118 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-navy-200">
-                <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
-                  Account Name
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
-                  Ship To City
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
-                  Ship To State
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
-                  Primary Contact
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAccounts.map((account) => (
-                <tr
-                  key={account.id}
-                  className="border-b border-navy-100 hover:bg-cream-50"
-                >
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/admin/accounts/${account.id}`}
-                        className="text-navy-900 font-medium hover:text-gold-600"
-                      >
-                        {account.name}
-                      </Link>
-                      {account.locationCount !== undefined && account.locationCount > 1 && (
-                        <span className="px-2 py-1 text-xs font-semibold bg-navy-100 text-navy-700 rounded-full">
-                          {account.locationCount} locations
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-sm text-navy-600">
-                    {(account.account_type === 'multi_location' || (account.locationCount && account.locationCount > 1))
-                      ? account.locationCities?.join(", ") || "—"
-                      : account.udf_city || "—"}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-navy-600">
-                    {(account.account_type === 'multi_location' || (account.locationCount && account.locationCount > 1))
-                      ? account.locationStates?.join(", ") || "—"
-                      : account.udf_state || "—"}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-navy-600">
-                    {account.primary_contact_name || account.primary_contact_email || "—"}
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      <Link
-                        href={`/admin/accounts/${account.id}`}
-                        className="text-gold-600 hover:text-gold-700 font-medium text-sm"
-                      >
-                        View
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(account.id, account.name)}
-                        disabled={deletingId === account.id}
-                        className="text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Delete account"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1200px]">
+              <thead>
+                <tr className="border-b border-navy-200">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
+                    Account Name
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
+                    Address
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
+                    City
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
+                    State
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
+                    Zip Code
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
+                    Country
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
+                    Primary Contact
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredAccounts.map((account) => {
+                  // Determine address, city, state, zip, country based on account type
+                  const isMulti = account.account_type === 'multi_location' || (account.locationCount && account.locationCount > 1);
+                  const address = isMulti 
+                    ? (account.locationAddresses && account.locationAddresses.length > 0 ? account.locationAddresses[0] : null)
+                    : account.udf_address_line1;
+                  const city = isMulti 
+                    ? (account.locationCities && account.locationCities.length > 0 ? account.locationCities[0] : null)
+                    : account.udf_city;
+                  const state = isMulti 
+                    ? (account.locationStates && account.locationStates.length > 0 ? account.locationStates[0] : null)
+                    : account.udf_state;
+                  const zip = isMulti 
+                    ? (account.locationZipCodes && account.locationZipCodes.length > 0 ? account.locationZipCodes[0] : null)
+                    : account.udf_zipcode;
+                  const country = account.locationCountries && account.locationCountries.length > 0
+                    ? account.locationCountries[0]
+                    : account.udf_country_code;
+
+                  return (
+                    <tr
+                      key={account.id}
+                      className="border-b border-navy-100 hover:bg-cream-50"
+                    >
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/admin/accounts/${account.id}`}
+                            className="text-navy-900 font-medium hover:text-gold-600"
+                          >
+                            {account.name}
+                          </Link>
+                          {account.locationCount !== undefined && account.locationCount > 1 && (
+                            <span className="px-2 py-1 text-xs font-semibold bg-navy-100 text-navy-700 rounded-full">
+                              {account.locationCount} locations
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-sm text-navy-600">
+                        {address || "—"}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-navy-600">
+                        {city || "—"}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-navy-600">
+                        {state || "—"}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-navy-600">
+                        {zip || "—"}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-navy-600">
+                        {country || "—"}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-navy-600">
+                        {account.primary_contact_name || account.primary_contact_email || "—"}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <Link
+                            href={`/admin/accounts/${account.id}`}
+                            className="text-gold-600 hover:text-gold-700 font-medium text-sm"
+                          >
+                            View
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(account.id, account.name)}
+                            disabled={deletingId === account.id}
+                            className="text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Delete account"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
