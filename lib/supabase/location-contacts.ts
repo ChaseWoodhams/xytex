@@ -50,9 +50,9 @@ export async function createLocationContact(
 
   // If this contact is marked as primary, unset other primary contacts for this location
   if (contactData.is_primary) {
-    await supabase
-      .from('location_contacts')
-      .update({ is_primary: false } as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase.from('location_contacts') as any)
+      .update({ is_primary: false })
       .eq('location_id', contactData.location_id)
       .eq('is_primary', true);
   }
@@ -84,9 +84,9 @@ export async function updateLocationContact(
   if (updates.is_primary === true) {
     const contact = await getLocationContactById(id);
     if (contact) {
-      await supabase
-        .from('location_contacts')
-        .update({ is_primary: false } as any)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from('location_contacts') as any)
+        .update({ is_primary: false })
         .eq('location_id', contact.location_id)
         .eq('is_primary', true)
         .neq('id', id);
