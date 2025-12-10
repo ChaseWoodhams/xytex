@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createInvitation, getAllInvitations, cancelInvitation } from '@/lib/supabase/invitations';
 import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
+import { sendInvitationEmail } from '@/lib/email/resend';
 import { NextResponse } from 'next/server';
 import type { UserRole } from '@/lib/supabase/types';
 
@@ -84,11 +85,35 @@ export async function POST(request: Request) {
       );
     }
 
-    // TODO: Send invitation email here
-    // For now, we'll return the invitation with the token
-    // In production, you'd send an email with the invitation link
+    // Generate the invitation link
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const inviteLink = `${baseUrl}/invite/accept?token=${invitation.token}`;
 
-    return NextResponse.json(invitation, { status: 201 });
+    // Send the invitation email via Resend
+    let emailSent = false;
+    let emailError: string | null = null;
+    
+    try {
+      await sendInvitationEmail({
+        email: invitation.email,
+        inviteLink,
+        role: invitation.role,
+        invitedByName: userProfile?.full_name || undefined,
+        expiresAt: invitation.expires_at,
+      });
+      emailSent = true;
+      console.log(`Invitation email sent to ${email}`);
+    } catch (err: any) {
+      console.error('Failed to send invitation email:', err);
+      emailError = err.message || 'Failed to send email';
+      // Don't fail the request if email fails - invitation was still created
+    }
+
+    return NextResponse.json({
+      ...invitation,
+      emailSent,
+      emailError,
+    }, { status: 201 });
   } catch (error: any) {
     console.error('Error creating invitation:', error);
     

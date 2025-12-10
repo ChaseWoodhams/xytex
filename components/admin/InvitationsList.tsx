@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { Invitation } from "@/lib/supabase/types";
-import { Mail, Clock, CheckCircle2, XCircle, AlertCircle, Trash2 } from "lucide-react";
+import { Mail, Clock, CheckCircle2, XCircle, AlertCircle, Trash2, Send, Loader2 } from "lucide-react";
 
 interface InvitationsListProps {
   initialInvitations: Invitation[];
@@ -11,6 +11,7 @@ interface InvitationsListProps {
 export default function InvitationsList({ initialInvitations }: InvitationsListProps) {
   const [invitations, setInvitations] = useState(initialInvitations);
   const [loading, setLoading] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   const refreshInvitations = async () => {
     setLoading(true);
@@ -45,6 +46,32 @@ export default function InvitationsList({ initialInvitations }: InvitationsListP
     } catch (error) {
       console.error("Error cancelling invitation:", error);
       alert("An error occurred");
+    }
+  };
+
+  const handleResendEmail = async (id: string) => {
+    setResendingId(id);
+    try {
+      const response = await fetch("/api/admin/invitations/resend", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ invitationId: id }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert("Invitation email sent successfully!");
+      } else {
+        alert(data.error || "Failed to resend invitation email");
+      }
+    } catch (error) {
+      console.error("Error resending invitation:", error);
+      alert("An error occurred while sending the email");
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -165,6 +192,19 @@ export default function InvitationsList({ initialInvitations }: InvitationsListP
                   <div className="flex items-center gap-2">
                     {invitation.status === "pending" && (
                       <>
+                        <button
+                          onClick={() => handleResendEmail(invitation.id)}
+                          disabled={resendingId === invitation.id}
+                          className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Resend invitation email"
+                        >
+                          {resendingId === invitation.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Send className="w-3 h-3" />
+                          )}
+                          Resend
+                        </button>
                         <button
                           onClick={() => copyInviteLink(invitation.token)}
                           className="text-sm text-gold-600 hover:text-gold-700 font-medium"
