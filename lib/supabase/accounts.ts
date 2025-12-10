@@ -166,6 +166,8 @@ export async function updateAccount(
   // If this is a single-location account, sync the location with account data
   if (data && data.account_type === 'single_location') {
     try {
+      // Use dynamic import to avoid circular dependency
+      const { getLocationsByAccount } = await import('./locations');
       const existingLocations = await getLocationsByAccount(id);
       const primaryLocation = existingLocations.find(loc => loc.is_primary) || existingLocations[0];
       
