@@ -10,7 +10,8 @@ import type {
   Activity,
   Note,
 } from "@/lib/supabase/types";
-import { ArrowLeft, Building2, MapPin, FileText, Clock, StickyNote, Plus, Phone, Mail, Trash2 } from "lucide-react";
+import { ArrowLeft, Building2, MapPin, FileText, Clock, StickyNote, Plus, Phone, Mail, Trash2, Edit, X } from "lucide-react";
+import AccountForm from "./AccountForm";
 import LocationsList from "./LocationsList";
 import AgreementsList from "./AgreementsList";
 import LocationContacts from "./LocationContacts";
@@ -45,6 +46,7 @@ export default function AccountDetailView({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showContactsModal, setShowContactsModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Determine if this is a multi-location account based on account_type or actual location count
   const isMultiLocation = account.account_type === 'multi_location' || locations.length > 1;
@@ -92,6 +94,42 @@ export default function AccountDetailView({
     }
   };
 
+  // If editing, show the form
+  if (isEditing) {
+    return (
+      <div className="p-8">
+        <Link
+          href="/admin/accounts"
+          className="inline-flex items-center gap-2 text-navy-600 hover:text-navy-900 mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Accounts
+        </Link>
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-4xl font-heading font-bold text-navy-900">
+              Edit Account
+            </h1>
+            <button
+              onClick={() => setIsEditing(false)}
+              className="px-4 py-2 text-navy-600 bg-navy-50 rounded-lg hover:bg-navy-100 transition-colors flex items-center gap-2"
+            >
+              <X className="w-4 h-4" />
+              Cancel
+            </button>
+          </div>
+        </div>
+        <AccountForm 
+          account={account}
+          onSuccess={() => {
+            setIsEditing(false);
+            router.refresh();
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="p-8">
       <Link
@@ -119,13 +157,33 @@ export default function AccountDetailView({
             {isMultiLocation ? "Multi-Location Organization" : "Single Location"}
           </span>
           </div>
-          <button
-            onClick={() => setShowDeleteDialog(true)}
-            className="px-4 py-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-2"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete Account
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className="px-4 py-2 text-gold-600 bg-gold-50 rounded-lg hover:bg-gold-100 transition-colors flex items-center gap-2"
+            >
+              {isEditing ? (
+                <>
+                  <X className="w-4 h-4" />
+                  Cancel Edit
+                </>
+              ) : (
+                <>
+                  <Edit className="w-4 h-4" />
+                  Edit Account
+                </>
+              )}
+            </button>
+            {!isEditing && (
+              <button
+                onClick={() => setShowDeleteDialog(true)}
+                className="px-4 py-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Account
+              </button>
+            )}
+          </div>
         </div>
         {/* Additional Information fields */}
         {(account.sage_code || account.udf_clinic_name || account.udf_shipto_name || account.udf_country_code || 

@@ -8,9 +8,10 @@ import { STATES_AND_PROVINCES, COUNTRY_CODES, INDUSTRIES } from "@/lib/utils/for
 
 interface AccountFormProps {
   account?: Account;
+  onSuccess?: () => void;
 }
 
-export default function AccountForm({ account }: AccountFormProps) {
+export default function AccountForm({ account, onSuccess }: AccountFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -131,8 +132,15 @@ export default function AccountForm({ account }: AccountFormProps) {
       }
 
       const data = await response.json();
-      router.push(`/admin/accounts/${data.id}`);
-      router.refresh();
+      
+      // If onSuccess callback is provided, call it (for inline editing)
+      // Otherwise, navigate to the account detail page (for new accounts)
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push(`/admin/accounts/${data.id}`);
+        router.refresh();
+      }
     } catch (err: any) {
       setError(err.message || "An error occurred");
       setLoading(false);
