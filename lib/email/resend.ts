@@ -1,10 +1,21 @@
 import { Resend } from 'resend';
 
-// Initialize Resend client
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 // Default from email - customize this for your domain
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Xytex <noreply@xytex.dev>';
+
+// Lazy initialization - only create Resend client when needed
+let resendInstance: Resend | null = null;
+
+function getResendClient(): Resend {
+  if (!resendInstance) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY is not configured');
+    }
+    resendInstance = new Resend(apiKey);
+  }
+  return resendInstance;
+}
 
 export interface SendEmailOptions {
   to: string | string[];
@@ -23,6 +34,7 @@ export async function sendEmail(options: SendEmailOptions) {
   const { to, subject, html, text, replyTo } = options;
 
   try {
+    const resend = getResendClient();
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: Array.isArray(to) ? to : [to],

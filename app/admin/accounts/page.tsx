@@ -35,6 +35,19 @@ export default async function AccountsPage() {
       // For multi-location accounts, collect all unique city/state combinations
       let cities: string[] = [];
       let states: string[] = [];
+      const countries = new Set<string>();
+      
+      // Collect countries from all locations (for both single and multi-location accounts)
+      locations.forEach((location) => {
+        if (location.country) {
+          countries.add(location.country);
+        }
+      });
+      
+      // For single-location accounts, also check account's country code
+      if (!isMultiLocation && account.udf_country_code) {
+        countries.add(account.udf_country_code);
+      }
       
       if (isMultiLocation && locationCount > 1) {
         // Get unique cities and states from locations
@@ -55,6 +68,7 @@ export default async function AccountsPage() {
         locationCount,
         locationCities: cities,
         locationStates: states,
+        locationCountries: Array.from(countries),
       };
     })
   );
