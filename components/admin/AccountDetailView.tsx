@@ -13,6 +13,7 @@ import type {
 import { ArrowLeft, Building2, MapPin, FileText, Clock, StickyNote, Plus, Phone, Mail, Trash2 } from "lucide-react";
 import LocationsList from "./LocationsList";
 import AgreementsList from "./AgreementsList";
+import LocationContacts from "./LocationContacts";
 import ActivitiesTimeline from "./ActivitiesTimeline";
 import NotesSection from "./NotesSection";
 import NetworkDashboard from "./NetworkDashboard";
@@ -43,6 +44,7 @@ export default function AccountDetailView({
   const [locationFilter, setLocationFilter] = useState<'all' | 'needs_contract' | 'active' | 'expired' | 'draft'>('all');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showContactsModal, setShowContactsModal] = useState(false);
 
   // Determine if this is a multi-location account based on account_type or actual location count
   const isMultiLocation = account.account_type === 'multi_location' || locations.length > 1;
@@ -126,8 +128,11 @@ export default function AccountDetailView({
           </button>
         </div>
         {/* Additional Information fields */}
-        {(account.sage_code || account.udf_clinic_name || account.udf_shipto_name || account.udf_country_code) && (
-          <div className="grid md:grid-cols-2 gap-4">
+        {(account.sage_code || account.udf_clinic_name || account.udf_shipto_name || account.udf_country_code || 
+          account.website || account.industry || account.annual_revenue || account.employee_count ||
+          account.udf_address_line1 || account.udf_address_line2 || account.udf_address_line3 || 
+          account.udf_city || account.udf_state || account.udf_zipcode) && (
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             {account.sage_code && (
               <div>
                 <dt className="text-xs text-navy-600 uppercase tracking-wide mb-1">Sage Code</dt>
@@ -150,6 +155,61 @@ export default function AccountDetailView({
               <div>
                 <dt className="text-xs text-navy-600 uppercase tracking-wide mb-1">Country Code</dt>
                 <dd className="text-sm text-navy-900 font-medium">{account.udf_country_code}</dd>
+              </div>
+            )}
+            {account.website && (
+              <div>
+                <dt className="text-xs text-navy-600 uppercase tracking-wide mb-1">Website</dt>
+                <dd className="text-sm text-navy-900 font-medium">
+                  <a
+                    href={account.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gold-600 hover:text-gold-700"
+                  >
+                    {account.website}
+                  </a>
+                </dd>
+              </div>
+            )}
+            {account.industry && (
+              <div>
+                <dt className="text-xs text-navy-600 uppercase tracking-wide mb-1">Industry</dt>
+                <dd className="text-sm text-navy-900 font-medium">{account.industry}</dd>
+              </div>
+            )}
+            {account.annual_revenue && (
+              <div>
+                <dt className="text-xs text-navy-600 uppercase tracking-wide mb-1">Annual Revenue</dt>
+                <dd className="text-sm text-navy-900 font-medium">
+                  ${account.annual_revenue.toLocaleString()}
+                </dd>
+              </div>
+            )}
+            {account.employee_count && (
+              <div>
+                <dt className="text-xs text-navy-600 uppercase tracking-wide mb-1">Employee Count</dt>
+                <dd className="text-sm text-navy-900 font-medium">
+                  {account.employee_count.toLocaleString()}
+                </dd>
+              </div>
+            )}
+            {(account.udf_address_line1 || account.udf_address_line2 || account.udf_address_line3 || 
+              account.udf_city || account.udf_state || account.udf_zipcode) && (
+              <div className="md:col-span-2">
+                <dt className="text-xs text-navy-600 uppercase tracking-wide mb-1">Address</dt>
+                <dd className="text-sm text-navy-900 font-medium">
+                  {account.udf_address_line1 && <div>{account.udf_address_line1}</div>}
+                  {account.udf_address_line2 && <div>{account.udf_address_line2}</div>}
+                  {account.udf_address_line3 && <div>{account.udf_address_line3}</div>}
+                  {(account.udf_city || account.udf_state || account.udf_zipcode) && (
+                    <div>
+                      {[account.udf_city, account.udf_state, account.udf_zipcode]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </div>
+                  )}
+                </dd>
               </div>
             )}
           </div>
@@ -191,200 +251,134 @@ export default function AccountDetailView({
               />
             )}
 
-            {/* Account Information - Show first for multi-location accounts */}
-            {isMultiLocation && (
-              <div className="bg-white rounded-xl shadow-md p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-navy-100 flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-navy-600" />
-                  </div>
-                  <h2 className="text-xl font-heading font-semibold text-navy-900">
-                    Account Information
-                  </h2>
-                </div>
-                <dl className="space-y-3">
-                  <div>
-                    <dt className="text-sm text-navy-600">Website</dt>
-                    <dd className="text-navy-900">
-                      {account.website ? (
-                        <a
-                          href={account.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-gold-600 hover:text-gold-700"
-                        >
-                          {account.website}
-                        </a>
-                      ) : (
-                        "—"
-                      )}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-navy-600">Industry</dt>
-                    <dd className="text-navy-900">{account.industry || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-navy-600">Annual Revenue</dt>
-                    <dd className="text-navy-900">
-                      {account.annual_revenue
-                        ? `$${account.annual_revenue.toLocaleString()}`
-                        : "—"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-navy-600">Employee Count</dt>
-                    <dd className="text-navy-900">
-                      {account.employee_count?.toLocaleString() || "—"}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-            )}
 
-            {/* Contact & Address Information - Combined Section - Only for single location accounts */}
+            {/* Contact Information - Combined Section - Only for single location accounts */}
             {!isMultiLocation && (account.primary_contact_name || account.primary_contact_email || account.primary_contact_phone || 
               account.udf_phone || account.udf_email || account.udf_fax ||
-              account.udf_address_line1 || account.udf_address_line2 || account.udf_address_line3 || 
-              account.udf_city || account.udf_state || account.udf_zipcode) && (
+              (locations.length > 0 && locations[0]?.id)) && (
               <div className="bg-white rounded-xl shadow-md p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-12 h-12 rounded-xl bg-gold-100 flex items-center justify-center">
                     <Phone className="w-6 h-6 text-gold-600" />
                   </div>
                   <h2 className="text-xl font-heading font-semibold text-navy-900">
-                    Contact & Address Information
+                    Contact Information
                   </h2>
-                </div>
-                
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Primary Contact */}
-                  {(account.primary_contact_name || account.primary_contact_email || account.primary_contact_phone) && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-navy-700 mb-3 uppercase tracking-wide">
-                        Primary Contact
-                      </h3>
-                      <dl className="space-y-3">
-                        {account.primary_contact_name && (
-                          <div>
-                            <dt className="text-sm text-navy-600">Name</dt>
-                            <dd className="text-navy-900 font-medium">
-                              {account.primary_contact_name}
-                            </dd>
-                          </div>
-                        )}
-                        {account.primary_contact_email && (
-                          <div>
-                            <dt className="text-sm text-navy-600">Email</dt>
-                            <dd className="text-navy-900">
-                              <a
-                                href={`mailto:${account.primary_contact_email}`}
-                                className="text-gold-600 hover:text-gold-700 flex items-center gap-1"
-                              >
-                                <Mail className="w-4 h-4" />
-                                {account.primary_contact_email}
-                              </a>
-                            </dd>
-                          </div>
-                        )}
-                        {account.primary_contact_phone && (
-                          <div>
-                            <dt className="text-sm text-navy-600">Phone</dt>
-                            <dd className="text-navy-900">
-                              <a
-                                href={`tel:${account.primary_contact_phone}`}
-                                className="text-gold-600 hover:text-gold-700 flex items-center gap-1"
-                              >
-                                <Phone className="w-4 h-4" />
-                                {account.primary_contact_phone}
-                              </a>
-                            </dd>
-                          </div>
-                        )}
-                      </dl>
-                    </div>
-                  )}
-
-                  {/* Additional Contact Information */}
-                  {(account.udf_phone || account.udf_email || account.udf_fax) && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-navy-700 mb-3 uppercase tracking-wide">
-                        Additional Contact
-                      </h3>
-                      <dl className="space-y-3">
-                        {account.udf_phone && (
-                          <div>
-                            <dt className="text-sm text-navy-600">Phone</dt>
-                            <dd className="text-navy-900">
-                              <a
-                                href={`tel:${account.udf_phone}`}
-                                className="text-gold-600 hover:text-gold-700 flex items-center gap-1"
-                              >
-                                <Phone className="w-4 h-4" />
-                                {account.udf_phone}
-                              </a>
-                            </dd>
-                          </div>
-                        )}
-                        {account.udf_email && (
-                          <div>
-                            <dt className="text-sm text-navy-600">Email</dt>
-                            <dd className="text-navy-900">
-                              <a
-                                href={`mailto:${account.udf_email}`}
-                                className="text-gold-600 hover:text-gold-700 flex items-center gap-1"
-                              >
-                                <Mail className="w-4 h-4" />
-                                {account.udf_email}
-                              </a>
-                            </dd>
-                          </div>
-                        )}
-                        {account.udf_fax && (
-                          <div>
-                            <dt className="text-sm text-navy-600">Fax</dt>
-                            <dd className="text-navy-900">{account.udf_fax}</dd>
-                          </div>
-                        )}
-                      </dl>
-                    </div>
+                  {locations.length > 0 && locations[0]?.id && (
+                    <button
+                      onClick={() => setShowContactsModal(true)}
+                      className="ml-auto p-2 text-gold-600 hover:text-gold-700 hover:bg-gold-50 rounded-lg transition-colors"
+                      title="Add Contact"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
                   )}
                 </div>
 
-                {/* Address Information */}
-                {(account.udf_address_line1 || account.udf_address_line2 || account.udf_address_line3 || 
-                  account.udf_city || account.udf_state || account.udf_zipcode) && (
-                  <div className="mt-6 pt-6 border-t border-navy-200">
-                    <h3 className="text-sm font-semibold text-navy-700 mb-3 uppercase tracking-wide flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
-                      Address
+                {/* Primary Contact from Account */}
+                {(account.primary_contact_name || account.primary_contact_email || account.primary_contact_phone) && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold text-navy-700 mb-3 uppercase tracking-wide">
+                      Primary Contact
                     </h3>
-                    <dl className="space-y-2">
-                      {account.udf_address_line1 && (
+                    <dl className="space-y-3">
+                      {account.primary_contact_name && (
                         <div>
-                          <dd className="text-navy-900">{account.udf_address_line1}</dd>
+                          <dt className="text-sm text-navy-600">Name</dt>
+                          <dd className="text-navy-900 font-medium">
+                            {account.primary_contact_name}
+                          </dd>
                         </div>
                       )}
-                      {account.udf_address_line2 && (
+                      {account.primary_contact_email && (
                         <div>
-                          <dd className="text-navy-900">{account.udf_address_line2}</dd>
+                          <dt className="text-sm text-navy-600">Email</dt>
+                          <dd className="text-navy-900">
+                            <a
+                              href={`mailto:${account.primary_contact_email}`}
+                              className="text-gold-600 hover:text-gold-700 flex items-center gap-1"
+                            >
+                              <Mail className="w-4 h-4" />
+                              {account.primary_contact_email}
+                            </a>
+                          </dd>
                         </div>
                       )}
-                      {account.udf_address_line3 && (
+                      {account.primary_contact_phone && (
                         <div>
-                          <dd className="text-navy-900">{account.udf_address_line3}</dd>
-                        </div>
-                      )}
-                      {(account.udf_city || account.udf_state || account.udf_zipcode) && (
-                        <div className="text-navy-900">
-                          {[account.udf_city, account.udf_state, account.udf_zipcode]
-                            .filter(Boolean)
-                            .join(", ")}
+                          <dt className="text-sm text-navy-600">Phone</dt>
+                          <dd className="text-navy-900">
+                            <a
+                              href={`tel:${account.primary_contact_phone}`}
+                              className="text-gold-600 hover:text-gold-700 flex items-center gap-1"
+                            >
+                              <Phone className="w-4 h-4" />
+                              {account.primary_contact_phone}
+                            </a>
+                          </dd>
                         </div>
                       )}
                     </dl>
                   </div>
                 )}
+
+                {/* Location Contacts */}
+                {locations.length > 0 && locations[0]?.id && (
+                  <div className="mb-6">
+                    <LocationContacts 
+                      locationId={locations[0].id} 
+                      showModal={showContactsModal}
+                      onModalClose={() => setShowContactsModal(false)}
+                      hideHeader={true}
+                    />
+                  </div>
+                )}
+
+                {/* Additional Contact Information */}
+                {(account.udf_phone || account.udf_email || account.udf_fax) && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold text-navy-700 mb-3 uppercase tracking-wide">
+                      Additional Contact
+                    </h3>
+                    <dl className="space-y-3">
+                      {account.udf_phone && (
+                        <div>
+                          <dt className="text-sm text-navy-600">Phone</dt>
+                          <dd className="text-navy-900">
+                            <a
+                              href={`tel:${account.udf_phone}`}
+                              className="text-gold-600 hover:text-gold-700 flex items-center gap-1"
+                            >
+                              <Phone className="w-4 h-4" />
+                              {account.udf_phone}
+                            </a>
+                          </dd>
+                        </div>
+                      )}
+                      {account.udf_email && (
+                        <div>
+                          <dt className="text-sm text-navy-600">Email</dt>
+                          <dd className="text-navy-900">
+                            <a
+                              href={`mailto:${account.udf_email}`}
+                              className="text-gold-600 hover:text-gold-700 flex items-center gap-1"
+                            >
+                              <Mail className="w-4 h-4" />
+                              {account.udf_email}
+                            </a>
+                          </dd>
+                        </div>
+                      )}
+                      {account.udf_fax && (
+                        <div>
+                          <dt className="text-sm text-navy-600">Fax</dt>
+                          <dd className="text-navy-900">{account.udf_fax}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  </div>
+                )}
+
               </div>
             )}
 
@@ -585,56 +579,6 @@ export default function AccountDetailView({
               </div>
             )}
 
-            {/* Account Information - Show for single location accounts (after Contact & Address) */}
-            {!isMultiLocation && (
-              <div className="bg-white rounded-xl shadow-md p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-navy-100 flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-navy-600" />
-                  </div>
-                  <h2 className="text-xl font-heading font-semibold text-navy-900">
-                    Account Information
-                  </h2>
-                </div>
-                <dl className="space-y-3">
-                  <div>
-                    <dt className="text-sm text-navy-600">Website</dt>
-                    <dd className="text-navy-900">
-                      {account.website ? (
-                        <a
-                          href={account.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-gold-600 hover:text-gold-700"
-                        >
-                          {account.website}
-                        </a>
-                      ) : (
-                        "—"
-                      )}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-navy-600">Industry</dt>
-                    <dd className="text-navy-900">{account.industry || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-navy-600">Annual Revenue</dt>
-                    <dd className="text-navy-900">
-                      {account.annual_revenue
-                        ? `$${account.annual_revenue.toLocaleString()}`
-                        : "—"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-navy-600">Employee Count</dt>
-                    <dd className="text-navy-900">
-                      {account.employee_count?.toLocaleString() || "—"}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-            )}
 
             {/* Notes - Combined at the bottom */}
             {(account.notes || account.udf_notes) && (

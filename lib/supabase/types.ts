@@ -138,6 +138,22 @@ export interface Location {
   updated_at: string;
 }
 
+export type ContactRole = 'primary' | 'billing' | 'clinical' | 'administrative' | 'other';
+
+export interface LocationContact {
+  id: string;
+  location_id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  role: ContactRole;
+  title: string | null;
+  is_primary: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Agreement {
   id: string;
   account_id: string;

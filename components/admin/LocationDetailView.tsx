@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { Location, Account, Agreement } from "@/lib/supabase/types";
 import { ArrowLeft, MapPin, Building2, FileText, Trash2, Upload, Download, X } from "lucide-react";
 import AgreementsList from "./AgreementsList";
+import LocationContacts from "./LocationContacts";
 import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
 
 interface LocationDetailViewProps {
@@ -191,7 +192,10 @@ export default function LocationDetailView({
       <div>
         {activeTab === "overview" && (
           <div className="space-y-6">
-        {/* Location Codes */}
+            {/* Location Contacts - Show at top */}
+            <LocationContacts locationId={location.id} />
+
+            {/* Location Codes */}
         {(location.clinic_code || location.sage_code) && (
           <div className="bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-heading font-semibold text-navy-900 mb-4">
