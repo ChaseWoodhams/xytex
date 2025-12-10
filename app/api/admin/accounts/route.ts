@@ -3,7 +3,7 @@ import { getAccounts, createAccount } from '@/lib/supabase/accounts';
 import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
 import { NextResponse } from 'next/server';
-import type { AccountStatus, DealStage } from '@/lib/supabase/types';
+import type { AccountStatus } from '@/lib/supabase/types';
 
 export async function GET(request: Request) {
   try {
@@ -25,14 +25,11 @@ export async function GET(request: Request) {
     
     // Validate and type-check filter values
     const statusParam = searchParams.get('status');
-    const dealStageParam = searchParams.get('deal_stage');
     
     const validStatuses: AccountStatus[] = ['active', 'inactive', 'archived'];
-    const validDealStages: DealStage[] = ['prospect', 'qualified', 'negotiation', 'closed_won', 'closed_lost'];
     
     const filters: {
       status?: AccountStatus;
-      deal_stage?: DealStage;
       industry?: string;
       search?: string;
     } = {};
@@ -41,9 +38,7 @@ export async function GET(request: Request) {
       filters.status = statusParam as AccountStatus;
     }
     
-    if (dealStageParam && validDealStages.includes(dealStageParam as DealStage)) {
-      filters.deal_stage = dealStageParam as DealStage;
-    }
+    // Note: deal_stage filter removed as the column was dropped in migration 004
     
     const industryParam = searchParams.get('industry');
     if (industryParam) {

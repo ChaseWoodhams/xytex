@@ -3,7 +3,6 @@ import type { Account, DealStage, AccountStatus } from './types';
 
 export interface AccountFilters {
   status?: AccountStatus;
-  deal_stage?: DealStage;
   industry?: string;
   search?: string;
 }
@@ -18,9 +17,7 @@ export async function getAccounts(
     query = query.eq('status', filters.status);
   }
 
-  if (filters?.deal_stage) {
-    query = query.eq('deal_stage', filters.deal_stage);
-  }
+  // Note: deal_stage filter removed as the column was dropped in migration 004
 
   if (filters?.industry) {
     query = query.eq('industry', filters.industry);
@@ -45,7 +42,9 @@ export async function getAccounts(
     throw error;
   }
 
-  return data || [];
+  const accounts = data || [];
+  console.log(`[getAccounts] Found ${accounts.length} accounts`);
+  return accounts;
 }
 
 export async function getAccountById(id: string): Promise<Account | null> {
@@ -90,6 +89,52 @@ export async function createAccount(
     throw new Error(error.message || 'Failed to create account');
   }
 
+  // For single-location accounts: ensure clinic name = account name (no duplication)
+  if (data && data.account_type === 'single_location' && data.udf_clinic_name !== data.name) {
+    await (supabase.from('accounts') as any)
+      .update({ udf_clinic_name: data.name })
+      .eq('id', data.id);
+    data.udf_clinic_name = data.name;
+  }
+
+  // Automatically create a location for single-location accounts
+  if (data && data.account_type === 'single_location') {
+    try {
+      // Use dynamic import to avoid circular dependency
+      const { createLocation } = await import('./locations');
+      
+      const locationData = {
+        account_id: data.id,
+        name: data.name, // Use account name as location name (same as clinic name)
+        address_line1: data.udf_address_line1 || null,
+        address_line2: data.udf_address_line2 || null,
+        city: data.udf_city || null,
+        state: data.udf_state || null,
+        zip_code: data.udf_zipcode || null,
+        country: data.udf_country_code || 'USA',
+        phone: data.udf_phone || data.primary_contact_phone || null,
+        email: data.udf_email || data.primary_contact_email || null,
+        contact_name: data.primary_contact_name || null,
+        contact_title: null,
+        is_primary: true, // Single location is always primary
+        status: 'active' as const,
+        notes: data.notes || null,
+        sage_code: null, // Location sage code is separate from account sage code
+      };
+
+      const location = await createLocation(locationData);
+      if (location) {
+        console.log(`[createAccount] Auto-created location ${location.id} for single-location account ${data.id}`);
+      } else {
+        console.error(`[createAccount] Failed to auto-create location for account ${data.id}`);
+        // Don't fail account creation if location creation fails, but log it
+      }
+    } catch (locationError: any) {
+      console.error('Error auto-creating location for single-location account:', locationError);
+      // Don't fail account creation if location creation fails
+    }
+  }
+
   return data;
 }
 
@@ -108,6 +153,67 @@ export async function updateAccount(
   if (error) {
     console.error('Error updating account:', error);
     return null;
+  }
+
+  // For single-location accounts: ensure clinic name = account name (no duplication)
+  if (data && data.account_type === 'single_location' && data.udf_clinic_name !== data.name) {
+    await (supabase.from('accounts') as any)
+      .update({ udf_clinic_name: data.name })
+      .eq('id', id);
+    data.udf_clinic_name = data.name;
+  }
+
+  // If this is a single-location account, sync the location with account data
+  if (data && data.account_type === 'single_location') {
+    try {
+      const existingLocations = await getLocationsByAccount(id);
+      const primaryLocation = existingLocations.find(loc => loc.is_primary) || existingLocations[0];
+      
+      if (primaryLocation) {
+        // Update the existing location with account data
+        const { updateLocation } = await import('./locations');
+        await updateLocation(primaryLocation.id, {
+          name: data.name, // Keep location name in sync with account name (same as clinic name)
+          address_line1: data.udf_address_line1 || null,
+          address_line2: data.udf_address_line2 || null,
+          city: data.udf_city || null,
+          state: data.udf_state || null,
+          zip_code: data.udf_zipcode || null,
+          country: data.udf_country_code || 'USA',
+          phone: data.udf_phone || data.primary_contact_phone || null,
+          email: data.udf_email || data.primary_contact_email || null,
+          contact_name: data.primary_contact_name || null,
+          notes: data.notes || null,
+        });
+        console.log(`[updateAccount] Synced location ${primaryLocation.id} with account ${id} data`);
+      } else {
+        // No location exists yet, create one
+        const { createLocation } = await import('./locations');
+        const locationData = {
+          account_id: id,
+          name: data.name,
+          address_line1: data.udf_address_line1 || null,
+          address_line2: data.udf_address_line2 || null,
+          city: data.udf_city || null,
+          state: data.udf_state || null,
+          zip_code: data.udf_zipcode || null,
+          country: data.udf_country_code || 'USA',
+          phone: data.udf_phone || data.primary_contact_phone || null,
+          email: data.udf_email || data.primary_contact_email || null,
+          contact_name: data.primary_contact_name || null,
+          contact_title: null,
+          is_primary: true,
+          status: 'active' as const,
+          notes: data.notes || null,
+          sage_code: null,
+        };
+        await createLocation(locationData);
+        console.log(`[updateAccount] Auto-created location for single-location account ${id}`);
+      }
+    } catch (locationError: any) {
+      console.error('Error syncing location for single-location account:', locationError);
+      // Don't fail account update if location sync fails
+    }
   }
 
   return data;

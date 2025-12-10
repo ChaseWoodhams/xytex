@@ -97,6 +97,29 @@ export default function LocationDetailView({
       <div>
         {activeTab === "overview" && (
           <div className="space-y-6">
+        {/* Location Codes */}
+        {(location.clinic_code || location.sage_code) && (
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <h2 className="text-xl font-heading font-semibold text-navy-900 mb-4">
+              Location Codes
+            </h2>
+            <dl className="grid md:grid-cols-2 gap-4">
+              {location.clinic_code && (
+                <div>
+                  <dt className="text-xs text-navy-600 uppercase tracking-wide mb-1">Clinic Code</dt>
+                  <dd className="text-sm text-navy-900 font-medium">{location.clinic_code}</dd>
+                </div>
+              )}
+              {location.sage_code && (
+                <div>
+                  <dt className="text-xs text-navy-600 uppercase tracking-wide mb-1">Sage Code</dt>
+                  <dd className="text-sm text-navy-900 font-medium">{location.sage_code}</dd>
+                </div>
+              )}
+            </dl>
+          </div>
+        )}
+
         {/* Location Information */}
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-xl font-heading font-semibold text-navy-900 mb-4 flex items-center gap-2">
@@ -174,17 +197,17 @@ export default function LocationDetailView({
         </div>
 
         {/* Account UDF Information */}
-        {(account.udf_clinic_code || account.udf_clinic_name || account.udf_shipto_name || account.udf_country_code) && (
+        {(account.sage_code || account.udf_clinic_name || account.udf_shipto_name || account.udf_country_code) && (
           <div className="bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-heading font-semibold text-navy-900 mb-4 flex items-center gap-2">
               <Building2 className="w-5 h-5 text-gold-600" />
               Account Information
             </h2>
             <dl className="space-y-3 grid md:grid-cols-2 gap-4">
-              {account.udf_clinic_code && (
+              {account.sage_code && (
                 <div>
-                  <dt className="text-sm text-navy-600">Clinic Code</dt>
-                  <dd className="text-navy-900">{account.udf_clinic_code}</dd>
+                  <dt className="text-sm text-navy-600">Sage Code</dt>
+                  <dd className="text-navy-900">{account.sage_code}</dd>
                 </div>
               )}
               {account.udf_clinic_name && (

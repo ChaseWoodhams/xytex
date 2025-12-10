@@ -7,7 +7,14 @@ import AccountsList from "@/components/admin/AccountsList";
 import InviteTeamMember from "@/components/admin/InviteTeamMember";
 
 export default async function AccountsPage() {
-  const accounts = await getAccounts();
+  let accounts;
+  try {
+    accounts = await getAccounts();
+    console.log(`[AccountsPage] Loaded ${accounts.length} accounts`);
+  } catch (error) {
+    console.error('[AccountsPage] Error loading accounts:', error);
+    accounts = [];
+  }
 
   // Get location counts and city/state data for each account
   const accountsWithLocationCounts = await Promise.all(

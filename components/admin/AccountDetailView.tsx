@@ -90,12 +90,12 @@ export default function AccountDetailView({
           </span>
         </div>
         {/* Additional Information fields */}
-        {(account.udf_clinic_code || account.udf_clinic_name || account.udf_shipto_name || account.udf_country_code) && (
+        {(account.sage_code || account.udf_clinic_name || account.udf_shipto_name || account.udf_country_code) && (
           <div className="grid md:grid-cols-2 gap-4">
-            {account.udf_clinic_code && (
+            {account.sage_code && (
               <div>
-                <dt className="text-xs text-navy-600 uppercase tracking-wide mb-1">Clinic Code</dt>
-                <dd className="text-sm text-navy-900 font-medium">{account.udf_clinic_code}</dd>
+                <dt className="text-xs text-navy-600 uppercase tracking-wide mb-1">Sage Code</dt>
+                <dd className="text-sm text-navy-900 font-medium">{account.sage_code}</dd>
               </div>
             )}
             {account.udf_clinic_name && (
@@ -388,7 +388,7 @@ export default function AccountDetailView({
                       );
                     })()}
                   </div>
-                  {isMultiLocation && locations.length > 1 && (
+                  {isMultiLocation && (
                     <Link
                       href="#"
                       onClick={(e) => {
@@ -397,7 +397,7 @@ export default function AccountDetailView({
                       }}
                       className="text-sm text-gold-600 hover:text-gold-700 font-medium"
                     >
-                      View All →
+                      {locations.length > 1 ? 'View All' : 'Add Locations'} →
                     </Link>
                   )}
                 </div>

@@ -36,6 +36,7 @@ export default function LocationForm({
     is_primary: location?.is_primary || false,
     status: (location?.status || "active") as LocationStatus,
     notes: location?.notes || "",
+    sage_code: location?.sage_code || "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -102,6 +103,46 @@ export default function LocationForm({
               setFormData({ ...formData, name: e.target.value })
             }
             className="w-full px-4 py-2 border border-navy-200 rounded-lg focus:ring-2 focus:ring-gold-500 focus:border-gold-500 outline-none"
+          />
+        </div>
+
+        {location && location.clinic_code && (
+          <div>
+            <label
+              htmlFor="clinic_code"
+              className="block text-sm font-medium text-navy-700 mb-2"
+            >
+              Clinic Code
+            </label>
+            <input
+              id="clinic_code"
+              type="text"
+              value={location.clinic_code}
+              disabled
+              className="w-full px-4 py-2 border border-navy-200 rounded-lg bg-navy-50 text-navy-600 cursor-not-allowed"
+            />
+            <p className="mt-1 text-xs text-navy-500">
+              Auto-generated when location is created
+            </p>
+          </div>
+        )}
+
+        <div>
+          <label
+            htmlFor="sage_code"
+            className="block text-sm font-medium text-navy-700 mb-2"
+          >
+            Sage Code
+          </label>
+          <input
+            id="sage_code"
+            type="text"
+            value={formData.sage_code}
+            onChange={(e) =>
+              setFormData({ ...formData, sage_code: e.target.value })
+            }
+            className="w-full px-4 py-2 border border-navy-200 rounded-lg focus:ring-2 focus:ring-gold-500 focus:border-gold-500 outline-none"
+            placeholder="Enter Sage code..."
           />
         </div>
 

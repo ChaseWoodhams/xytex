@@ -85,7 +85,7 @@ export interface Account {
   name: string;
   website: string | null;
   industry: string | null;
-  deal_stage: DealStage;
+  // deal_stage removed - column was dropped in migration 004
   annual_revenue: number | null;
   employee_count: number | null;
   status: AccountStatus;
@@ -94,6 +94,7 @@ export interface Account {
   primary_contact_email: string | null;
   primary_contact_phone: string | null;
   notes: string | null;
+  sage_code: string | null;
   udf_clinic_code: string | null;
   udf_clinic_name: string | null;
   udf_shipto_name: string | null;
@@ -130,6 +131,8 @@ export interface Location {
   is_primary: boolean;
   status: LocationStatus;
   notes: string | null;
+  clinic_code: string | null;
+  sage_code: string | null;
   created_at: string;
   updated_at: string;
 }
