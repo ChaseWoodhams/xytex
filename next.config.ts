@@ -9,6 +9,20 @@ const nextConfig: NextConfig = {
   // Optimize for Vercel deployment
   compress: true,
   poweredByHeader: false,
+  // Prevent search engine crawling (dev site)
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-Robots-Tag',
+            value: 'noindex, nofollow, noarchive, nosnippet, noimageindex',
+          },
+        ],
+      },
+    ];
+  },
   // Turbopack configuration (Next.js 16 uses Turbopack by default)
   turbopack: {
     // Empty config to silence the warning
