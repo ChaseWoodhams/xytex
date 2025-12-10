@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "migrate": "tsx scripts/migrate-donors.ts"
+    "migrate": "tsx scripts/migrate-donors.ts",
+    "verify-users": "tsx scripts/verify-all-users.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
