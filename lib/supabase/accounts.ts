@@ -1,5 +1,5 @@
 import { createAdminClient } from './admin';
-import type { Account, DealStage, AccountStatus } from './types';
+import type { Account, AccountStatus } from './types';
 
 export interface AccountFilters {
   status?: AccountStatus;
