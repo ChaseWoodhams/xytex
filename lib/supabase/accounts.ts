@@ -169,7 +169,7 @@ export async function updateAccount(
       // Use dynamic import to avoid circular dependency
       const { getLocationsByAccount } = await import('./locations');
       const existingLocations = await getLocationsByAccount(id);
-      const primaryLocation = existingLocations.find(loc => loc.is_primary) || existingLocations[0];
+      const primaryLocation = existingLocations.find((loc: { is_primary: boolean }) => loc.is_primary) || existingLocations[0];
       
       if (primaryLocation) {
         // Update the existing location with account data
@@ -235,4 +235,3 @@ export async function deleteAccount(id: string): Promise<boolean> {
 
   return true;
 }
-
