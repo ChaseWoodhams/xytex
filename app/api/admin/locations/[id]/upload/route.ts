@@ -129,6 +129,15 @@ export async function POST(
       );
     }
 
+    if (!agreement) {
+      console.error('Agreement creation returned null');
+      await updateLocationAgreementDocumentUrl(id, documentUrl);
+      return NextResponse.json(
+        { error: 'Document uploaded but failed to create agreement record', document_url: documentUrl },
+        { status: 500 }
+      );
+    }
+
     console.log('Agreement created successfully:', agreement.id);
 
     // Also update the location with the document URL for backward compatibility
