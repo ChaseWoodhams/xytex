@@ -47,13 +47,17 @@ export default function DeleteConfirmationDialog({
           </div>
 
           <div className="mb-6">
-            <p className="text-navy-700 mb-2">{message}</p>
-            <p className="text-sm font-medium text-navy-900 bg-red-50 border border-red-200 rounded-lg p-3">
-              {itemName}
-            </p>
-            <p className="text-sm text-red-600 mt-3 font-medium">
-              This action cannot be undone.
-            </p>
+            <p className="text-navy-700 mb-3 whitespace-pre-line">{message}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+              <p className="text-xs text-red-600 uppercase tracking-wide mb-1">Account to Delete:</p>
+              <p className="text-sm font-medium text-navy-900">{itemName}</p>
+            </div>
+            <div className="bg-red-100 border border-red-300 rounded-lg p-3">
+              <p className="text-sm text-red-700 font-semibold flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                Warning: This action cannot be undone.
+              </p>
+            </div>
           </div>
 
           <div className="flex gap-3 justify-end">

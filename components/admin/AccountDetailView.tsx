@@ -706,7 +706,13 @@ export default function AccountDetailView({
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDeleteAccount}
         title="Delete Account"
-        message="Are you sure you want to delete this account? This will also delete all associated locations, agreements, activities, and notes."
+        message={`Are you sure you want to delete this account? This will permanently delete:
+        
+• All ${locations.length} location${locations.length !== 1 ? 's' : ''} associated with this account
+• All agreements, activities, and notes
+• All related data
+
+This action cannot be undone.`}
         itemName={account.name}
         isLoading={isDeleting}
       />
