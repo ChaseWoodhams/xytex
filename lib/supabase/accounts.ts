@@ -224,47 +224,116 @@ export async function updateAccount(
 export async function deleteAccount(id: string): Promise<boolean> {
   const supabase = createAdminClient();
   
-  // First, verify the account exists
-  const { data: existingAccount, error: fetchError } = await supabase
-    .from('accounts')
-    .select('id')
-    .eq('id', id)
-    .single();
+  try {
+    // First, verify the account exists and get its details
+    const accountQuery = await supabase
+      .from('accounts')
+      .select('id, name, created_by')
+      .eq('id', id)
+      .single();
+    
+    const { data: existingAccount, error: fetchError } = accountQuery;
 
-  if (fetchError) {
-    console.error('Error fetching account before deletion:', fetchError);
-    return false;
-  }
+    if (fetchError) {
+      console.error('Error fetching account before deletion:', {
+        message: fetchError.message,
+        details: fetchError.details,
+        hint: fetchError.hint,
+        code: fetchError.code,
+        fullError: fetchError
+      });
+      throw new Error(`Failed to fetch account: ${fetchError.message}`);
+    }
 
-  if (!existingAccount) {
-    console.error(`Account with id ${id} not found`);
-    return false;
-  }
+    if (!existingAccount || !('id' in existingAccount)) {
+      console.error(`Account with id ${id} not found`);
+      throw new Error(`Account with id ${id} not found`);
+    }
 
-  // Delete the account and return the deleted row to verify deletion
-  const { data: deletedData, error } = await supabase
-    .from('accounts')
-    .delete()
-    .eq('id', id)
-    .select();
+    const accountData = existingAccount as { id: string; name: string; created_by: string | null };
 
-  if (error) {
-    console.error('Error deleting account:', {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code,
-      fullError: error
+    // Check if created_by references a valid user (this shouldn't block deletion, but helps with debugging)
+    if (accountData.created_by) {
+      const { data: userCheck } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', accountData.created_by)
+        .single();
+      
+      if (!userCheck) {
+        console.warn(`Account ${id} has invalid created_by reference: ${accountData.created_by}`);
+        // This shouldn't prevent deletion, but we log it for debugging
+      }
+    }
+
+    // Delete related data first to avoid any constraint issues
+    // Note: These should cascade automatically, but we'll delete them explicitly to be safe
+    try {
+      // Delete locations (should cascade, but explicit deletion is safer)
+      await supabase
+        .from('locations')
+        .delete()
+        .eq('account_id', id);
+      
+      // Delete agreements (should cascade, but explicit deletion is safer)
+      await supabase
+        .from('agreements')
+        .delete()
+        .eq('account_id', id);
+      
+      // Delete activities (should cascade, but explicit deletion is safer)
+      await supabase
+        .from('activities')
+        .delete()
+        .eq('account_id', id);
+      
+      // Delete notes (should cascade, but explicit deletion is safer)
+      await supabase
+        .from('notes')
+        .delete()
+        .eq('account_id', id);
+    } catch (relatedDataError: unknown) {
+      const errorMessage = relatedDataError instanceof Error ? relatedDataError.message : 'Unknown error';
+      console.warn('Error deleting related data (may not exist):', errorMessage);
+      // Continue with account deletion even if related data deletion fails
+    }
+
+    // Delete the account and return the deleted row to verify deletion
+    const { data: deletedData, error } = await supabase
+      .from('accounts')
+      .delete()
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      console.error('Error deleting account:', {
+        accountId: id,
+        accountName: accountData.name,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        fullError: error
+      });
+      throw new Error(`Failed to delete account: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
+    }
+
+    // Verify that a row was actually deleted
+    if (!deletedData || deletedData.length === 0) {
+      console.error(`Failed to delete account ${id}: No rows were deleted`);
+      throw new Error(`Failed to delete account ${id}: No rows were deleted`);
+    }
+
+    console.log(`Successfully deleted account ${id} (${accountData.name})`);
+    return true;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error('Error in deleteAccount:', {
+      accountId: id,
+      error: errorMessage,
+      stack: errorStack
     });
-    return false;
+    throw error; // Re-throw to allow API route to handle it
   }
-
-  // Verify that a row was actually deleted
-  if (!deletedData || deletedData.length === 0) {
-    console.error(`Failed to delete account ${id}: No rows were deleted`);
-    return false;
-  }
-
-  console.log(`Successfully deleted account ${id}`);
-  return true;
 }
