@@ -1,16 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import type { Agreement } from "@/lib/supabase/types";
-import { FileText, Plus, Download, Edit, Trash2 } from "lucide-react";
+import { FileText, Plus, Download, Edit, Trash2, Upload } from "lucide-react";
 
 interface AgreementsListProps {
   accountId: string;
+  locationId: string;
   agreements: Agreement[];
 }
 
-export default function AgreementsList({ accountId, agreements }: AgreementsListProps) {
-  const [showForm, setShowForm] = useState(false);
+export default function AgreementsList({ accountId, locationId, agreements }: AgreementsListProps) {
+  const router = useRouter();
+  const [showUpload, setShowUpload] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setUploadError('Only PDF files are allowed');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`/api/admin/locations/${locationId}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload document');
+      }
+
+      router.refresh();
+      setShowUpload(false);
+    } catch (error: any) {
+      console.error('Error uploading document:', error);
+      setUploadError(error.message || 'Failed to upload document');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6">
@@ -19,11 +65,11 @@ export default function AgreementsList({ accountId, agreements }: AgreementsList
           Agreements
         </h2>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => setShowUpload(!showUpload)}
           className="btn btn-primary"
         >
-          <Plus className="w-5 h-5" />
-          New Agreement
+          <Upload className="w-5 h-5" />
+          Upload Agreement PDF
         </button>
       </div>
 
@@ -31,8 +77,9 @@ export default function AgreementsList({ accountId, agreements }: AgreementsList
         <div className="text-center py-12">
           <FileText className="w-16 h-16 text-navy-300 mx-auto mb-4" />
           <p className="text-navy-600 mb-4">No agreements yet</p>
-          <button onClick={() => setShowForm(true)} className="btn btn-primary">
-            Create First Agreement
+          <button onClick={() => setShowUpload(true)} className="btn btn-primary">
+            <Upload className="w-5 h-5" />
+            Upload Agreement PDF
           </button>
         </div>
       ) : (
@@ -122,17 +169,52 @@ export default function AgreementsList({ accountId, agreements }: AgreementsList
         </div>
       )}
 
-      {showForm && (
-        <div className="mt-6 p-4 bg-cream-50 rounded-lg border border-navy-200">
-          <p className="text-navy-600 mb-4">
-            Agreement form will be implemented in the next phase
-          </p>
-          <button
-            onClick={() => setShowForm(false)}
-            className="btn btn-secondary"
-          >
-            Cancel
-          </button>
+      {showUpload && (
+        <div className="mt-6 p-6 bg-cream-50 rounded-lg border border-navy-200">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-heading font-semibold text-navy-900 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-gold-600" />
+              Upload Agreement PDF
+            </h3>
+            <button
+              onClick={() => {
+                setShowUpload(false);
+                setUploadError(null);
+              }}
+              className="text-navy-600 hover:text-navy-900 text-2xl leading-none"
+              disabled={isUploading}
+            >
+              ×
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            <p className="text-sm text-navy-600">
+              Upload a location-level agreement document (PDF format)
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,application/pdf"
+              onChange={handleFileSelect}
+              disabled={isUploading}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="btn btn-primary"
+            >
+              <Upload className="w-5 h-5" />
+              {isUploading ? 'Uploading...' : 'Choose PDF File'}
+            </button>
+          </div>
+
+          {uploadError && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{uploadError}</p>
+            </div>
+          )}
         </div>
       )}
     </div>

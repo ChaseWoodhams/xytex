@@ -205,3 +205,60 @@ export async function deleteLocation(id: string): Promise<boolean> {
   return true;
 }
 
+export async function uploadLocationAgreementDocument(
+  file: File | Blob,
+  locationId: string,
+  fileName?: string
+): Promise<string | null> {
+  const supabase = createAdminClient();
+  
+  // Generate unique filename
+  const originalName = file instanceof File ? file.name : 'document';
+  const fileExt = originalName.split('.').pop() || 'pdf';
+  const uniqueFileName = fileName || `location-${locationId}-${Date.now()}.${fileExt}`;
+  const filePath = `location-agreements/${uniqueFileName}`;
+
+  // Convert File/Blob to ArrayBuffer for server-side upload
+  const arrayBuffer = await file.arrayBuffer();
+
+  // Upload file to Supabase Storage
+  const { error: uploadError } = await supabase.storage
+    .from('agreements')
+    .upload(filePath, arrayBuffer, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file instanceof File ? file.type : 'application/pdf',
+    });
+
+  if (uploadError) {
+    console.error('Error uploading location agreement document:', uploadError);
+    return null;
+  }
+
+  // Get public URL
+  const { data: urlData } = supabase.storage
+    .from('agreements')
+    .getPublicUrl(filePath);
+
+  return urlData.publicUrl;
+}
+
+export async function updateLocationAgreementDocumentUrl(
+  locationId: string,
+  documentUrl: string | null
+): Promise<boolean> {
+  const supabase = createAdminClient();
+  
+  const { error } = await supabase
+    .from('locations')
+    .update({ agreement_document_url: documentUrl })
+    .eq('id', locationId);
+
+  if (error) {
+    console.error('Error updating location agreement document URL:', error);
+    return false;
+  }
+
+  return true;
+}
+

@@ -679,6 +679,7 @@ export default function AccountDetailView({
         {activeTab === "agreements" && (!isMultiLocation || locations.length <= 1) && (
           <AgreementsList
             accountId={account.id}
+            locationId={locations[0]?.id || ""}
             agreements={agreements}
           />
         )}

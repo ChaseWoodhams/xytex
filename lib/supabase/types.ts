@@ -133,6 +133,7 @@ export interface Location {
   notes: string | null;
   clinic_code: string | null;
   sage_code: string | null;
+  agreement_document_url: string | null;
   created_at: string;
   updated_at: string;
 }

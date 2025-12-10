@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Location, Account, Agreement } from "@/lib/supabase/types";
-import { ArrowLeft, MapPin, Building2, FileText, Trash2 } from "lucide-react";
+import { ArrowLeft, MapPin, Building2, FileText, Trash2, Upload, Download, X } from "lucide-react";
 import AgreementsList from "./AgreementsList";
 import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
 
@@ -25,6 +25,10 @@ export default function LocationDetailView({
   const [activeTab, setActiveTab] = useState<"overview" | "agreements">("overview");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [currentDocumentUrl, setCurrentDocumentUrl] = useState<string | null>(location.agreement_document_url);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Only show agreements tab if this is a multi-location account
   // Use account_type or fallback to isMultiLocation flag
@@ -33,6 +37,82 @@ export default function LocationDetailView({
     { id: "overview", label: "Overview", icon: MapPin },
     ...(shouldShowAgreements ? [{ id: "agreements" as const, label: "Agreements", icon: FileText }] : []),
   ];
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setUploadError('Only PDF files are allowed');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`/api/admin/locations/${location.id}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload document');
+      }
+
+      const data = await response.json();
+      setCurrentDocumentUrl(data.document_url);
+      router.refresh();
+    } catch (error: any) {
+      console.error('Error uploading document:', error);
+      setUploadError(error.message || 'Failed to upload document');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveDocument = async () => {
+    if (!confirm('Are you sure you want to remove this agreement document?')) {
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      // Update location to remove document URL
+      const response = await fetch(`/api/admin/locations/${location.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          agreement_document_url: null,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to remove document');
+      }
+
+      setCurrentDocumentUrl(null);
+      router.refresh();
+    } catch (error: any) {
+      console.error('Error removing document:', error);
+      setUploadError(error.message || 'Failed to remove document');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   return (
     <div className="p-8">
@@ -210,6 +290,97 @@ export default function LocationDetailView({
           </dl>
         </div>
 
+        {/* Location Agreement Document */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-heading font-semibold text-navy-900 mb-4 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-gold-600" />
+            Location Agreement
+          </h2>
+          
+          {currentDocumentUrl ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-navy-600" />
+                  <div>
+                    <p className="text-sm font-medium text-navy-900">Agreement Document</p>
+                    <p className="text-xs text-navy-600">PDF document uploaded</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={currentDocumentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2 text-sm bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    View Document
+                  </a>
+                  <button
+                    onClick={handleRemoveDocument}
+                    disabled={isUploading}
+                    className="px-3 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <X className="w-4 h-4" />
+                    Remove
+                  </button>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-navy-700 mb-2">
+                  Replace Document
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  onChange={handleFileSelect}
+                  disabled={isUploading}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="px-4 py-2 text-sm bg-navy-100 text-navy-700 rounded-lg hover:bg-navy-200 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Upload className="w-4 h-4" />
+                  {isUploading ? 'Uploading...' : 'Upload New Document'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-navy-600">
+                Upload a location-level agreement document (PDF format)
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,application/pdf"
+                onChange={handleFileSelect}
+                disabled={isUploading}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="px-4 py-2 bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Upload className="w-4 h-4" />
+                {isUploading ? 'Uploading...' : 'Upload Agreement Document'}
+              </button>
+            </div>
+          )}
+
+          {uploadError && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{uploadError}</p>
+            </div>
+          )}
+        </div>
+
         {/* Account UDF Information */}
         {(account.sage_code || account.udf_clinic_name || account.udf_shipto_name || account.udf_country_code) && (
           <div className="bg-white rounded-xl shadow-md p-6">
@@ -353,6 +524,7 @@ export default function LocationDetailView({
         {activeTab === "agreements" && shouldShowAgreements && (
           <AgreementsList
             accountId={account.id}
+            locationId={location.id}
             agreements={agreements}
           />
         )}
