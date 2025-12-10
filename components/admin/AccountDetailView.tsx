@@ -677,11 +677,20 @@ export default function AccountDetailView({
 
         {/* Agreements tab - only for single-location accounts */}
         {activeTab === "agreements" && (!isMultiLocation || locations.length <= 1) && (
-          <AgreementsList
-            accountId={account.id}
-            locationId={locations[0]?.id || ""}
-            agreements={agreements}
-          />
+          locations.length > 0 && locations[0]?.id ? (
+            <AgreementsList
+              accountId={account.id}
+              locationId={locations[0].id}
+              agreements={locationAgreementsMap.get(locations[0].id) || []}
+            />
+          ) : (
+            <div className="bg-white rounded-xl shadow-md p-6">
+              <div className="text-center py-12">
+                <FileText className="w-16 h-16 text-navy-300 mx-auto mb-4" />
+                <p className="text-navy-600 mb-4">No location found. Please add a location to upload agreements.</p>
+              </div>
+            </div>
+          )
         )}
 
         {/* Activities tab - only for single-location accounts */}

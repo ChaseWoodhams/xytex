@@ -101,38 +101,56 @@ export async function createAccount(
   if (data && data.account_type === 'single_location') {
     try {
       // Use dynamic import to avoid circular dependency
-      const { createLocation } = await import('./locations');
+      const { createLocation, getLocationsByAccount } = await import('./locations');
       
-      const locationData = {
-        account_id: data.id,
-        name: data.name, // Use account name as location name (same as clinic name)
-        address_line1: data.udf_address_line1 || null,
-        address_line2: data.udf_address_line2 || null,
-        city: data.udf_city || null,
-        state: data.udf_state || null,
-        zip_code: data.udf_zipcode || null,
-        country: data.udf_country_code || 'USA',
-        phone: data.udf_phone || data.primary_contact_phone || null,
-        email: data.udf_email || data.primary_contact_email || null,
-        contact_name: data.primary_contact_name || null,
-        contact_title: null,
-        is_primary: true, // Single location is always primary
-        status: 'active' as const,
-        notes: data.notes || null,
-        sage_code: null, // Location sage code is separate from account sage code
-        agreement_document_url: null,
-      };
-
-      const location = await createLocation(locationData);
-      if (location) {
-        console.log(`[createAccount] Auto-created location ${location.id} for single-location account ${data.id}`);
+      // Check if location already exists (shouldn't happen for new accounts, but check anyway)
+      const existingLocations = await getLocationsByAccount(data.id);
+      if (existingLocations.length > 0) {
+        console.log(`[createAccount] Location already exists for account ${data.id}, skipping auto-creation`);
       } else {
-        console.error(`[createAccount] Failed to auto-create location for account ${data.id}`);
-        // Don't fail account creation if location creation fails, but log it
+        // Normalize country code - default to 'US' if not provided
+        let countryCode = data.udf_country_code || 'US';
+        // Handle common variations
+        if (countryCode.toUpperCase() === 'USA' || countryCode.toUpperCase() === 'UNITED STATES') {
+          countryCode = 'US';
+        }
+        
+        const locationData = {
+          account_id: data.id,
+          name: data.name, // Use account name as location name (same as clinic name)
+          address_line1: data.udf_address_line1 || null,
+          address_line2: data.udf_address_line2 || null,
+          city: data.udf_city || null,
+          state: data.udf_state || null,
+          zip_code: data.udf_zipcode || null,
+          country: countryCode,
+          phone: data.primary_contact_phone || null,
+          email: data.primary_contact_email || null,
+          contact_name: data.primary_contact_name || null,
+          contact_title: null,
+          is_primary: true, // Single location is always primary
+          status: 'active' as const,
+          notes: data.notes || null,
+          sage_code: null, // Location sage code is separate from account sage code
+          agreement_document_url: null,
+        };
+
+        const location = await createLocation(locationData);
+        if (location) {
+          console.log(`[createAccount] Auto-created location ${location.id} for single-location account ${data.id}`);
+        } else {
+          console.error(`[createAccount] Failed to auto-create location for account ${data.id} - createLocation returned null`);
+          throw new Error('Location creation returned null');
+        }
       }
     } catch (locationError: any) {
-      console.error('Error auto-creating location for single-location account:', locationError);
-      // Don't fail account creation if location creation fails
+      console.error('Error auto-creating location for single-location account:', {
+        accountId: data.id,
+        error: locationError.message,
+        stack: locationError.stack
+      });
+      // Don't fail account creation if location creation fails, but log it
+      // The account was created successfully, location can be added manually if needed
     }
   }
 
@@ -175,6 +193,13 @@ export async function updateAccount(
       if (primaryLocation) {
         // Update the existing location with account data
         const { updateLocation } = await import('./locations');
+        
+        // Normalize country code
+        let countryCode = data.udf_country_code || 'US';
+        if (countryCode.toUpperCase() === 'USA' || countryCode.toUpperCase() === 'UNITED STATES') {
+          countryCode = 'US';
+        }
+        
         await updateLocation(primaryLocation.id, {
           name: data.name, // Keep location name in sync with account name (same as clinic name)
           address_line1: data.udf_address_line1 || null,
@@ -182,9 +207,9 @@ export async function updateAccount(
           city: data.udf_city || null,
           state: data.udf_state || null,
           zip_code: data.udf_zipcode || null,
-          country: data.udf_country_code || 'USA',
-          phone: data.udf_phone || data.primary_contact_phone || null,
-          email: data.udf_email || data.primary_contact_email || null,
+          country: countryCode,
+          phone: data.primary_contact_phone || null,
+          email: data.primary_contact_email || null,
           contact_name: data.primary_contact_name || null,
           notes: data.notes || null,
         });
@@ -192,6 +217,13 @@ export async function updateAccount(
       } else {
         // No location exists yet, create one
         const { createLocation } = await import('./locations');
+        
+        // Normalize country code
+        let countryCode = data.udf_country_code || 'US';
+        if (countryCode.toUpperCase() === 'USA' || countryCode.toUpperCase() === 'UNITED STATES') {
+          countryCode = 'US';
+        }
+        
         const locationData = {
           account_id: id,
           name: data.name,
@@ -200,9 +232,9 @@ export async function updateAccount(
           city: data.udf_city || null,
           state: data.udf_state || null,
           zip_code: data.udf_zipcode || null,
-          country: data.udf_country_code || 'USA',
-          phone: data.udf_phone || data.primary_contact_phone || null,
-          email: data.udf_email || data.primary_contact_email || null,
+          country: countryCode,
+          phone: data.primary_contact_phone || null,
+          email: data.primary_contact_email || null,
           contact_name: data.primary_contact_name || null,
           contact_title: null,
           is_primary: true,
@@ -211,8 +243,12 @@ export async function updateAccount(
           sage_code: null,
           agreement_document_url: null,
         };
-        await createLocation(locationData);
-        console.log(`[updateAccount] Auto-created location for single-location account ${id}`);
+        const location = await createLocation(locationData);
+        if (location) {
+          console.log(`[updateAccount] Auto-created location ${location.id} for single-location account ${id}`);
+        } else {
+          console.error(`[updateAccount] Failed to auto-create location for account ${id}`);
+        }
       }
     } catch (locationError: any) {
       console.error('Error syncing location for single-location account:', locationError);

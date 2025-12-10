@@ -17,6 +17,8 @@
     "framer-motion": "^12.23.25",
     "lucide-react": "^0.555.0",
     "next": "16.0.7",
+    "pdf-parse": "^2.4.5",
+    "pdf2json": "^4.0.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "resend": "^6.6.0",

@@ -91,8 +91,26 @@ export async function createAgreement(
     .single();
 
   if (error) {
-    console.error('Error creating agreement:', error);
-    return null;
+    console.error('Error creating agreement:', {
+      error: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+      agreementData: {
+        account_id: agreementData.account_id,
+        location_id: agreementData.location_id,
+        title: agreementData.title,
+        agreement_type: agreementData.agreement_type,
+        status: agreementData.status,
+        created_by: agreementData.created_by
+      }
+    });
+    throw new Error(`Failed to create agreement: ${error.message}${error.hint ? ` (${error.hint})` : ''}`);
+  }
+
+  if (!data) {
+    console.error('createAgreement: Insert succeeded but no data returned');
+    throw new Error('Agreement creation succeeded but no data returned');
   }
 
   return data;

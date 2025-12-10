@@ -209,38 +209,94 @@ export async function uploadLocationAgreementDocument(
   file: File | Blob,
   locationId: string,
   fileName?: string
-): Promise<string | null> {
+): Promise<{ url: string } | { error: string }> {
   const supabase = createAdminClient();
   
-  // Generate unique filename
+  // Generate unique filename with UUID to ensure uniqueness
   const originalName = file instanceof File ? file.name : 'document';
   const fileExt = originalName.split('.').pop() || 'pdf';
-  const uniqueFileName = fileName || `location-${locationId}-${Date.now()}.${fileExt}`;
+  
+  // Generate a truly unique filename using UUID
+  // Fallback to timestamp + random if crypto.randomUUID() is not available
+  const generateUniqueId = (): string => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    // Fallback: timestamp + random number
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+  };
+  
+  let uniqueFileName: string;
+  if (fileName) {
+    // If a specific filename is provided, use it but make it unique
+    const baseName = fileName.replace(/\.[^/.]+$/, ''); // Remove extension
+    uniqueFileName = `${baseName}-${generateUniqueId()}.${fileExt}`;
+  } else {
+    // Generate unique filename: location-{locationId}-{uuid}.{ext}
+    uniqueFileName = `location-${locationId}-${generateUniqueId()}.${fileExt}`;
+  }
+  
   const filePath = `location-agreements/${uniqueFileName}`;
 
-  // Convert File/Blob to ArrayBuffer for server-side upload
-  const arrayBuffer = await file.arrayBuffer();
+  try {
+    // Convert File/Blob to ArrayBuffer for server-side upload
+    const arrayBuffer = await file.arrayBuffer();
 
-  // Upload file to Supabase Storage
-  const { error: uploadError } = await supabase.storage
-    .from('agreements')
-    .upload(filePath, arrayBuffer, {
-      cacheControl: '3600',
-      upsert: false,
-      contentType: file instanceof File ? file.type : 'application/pdf',
+    // Upload file to Supabase Storage with upsert enabled to allow overwriting
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('agreements')
+      .upload(filePath, arrayBuffer, {
+        cacheControl: '3600',
+        upsert: true, // Allow overwriting if file exists
+        contentType: file instanceof File ? file.type : 'application/pdf',
+      });
+
+    if (uploadError) {
+      console.error('Error uploading location agreement document:', {
+        locationId,
+        filePath,
+        fileName: uniqueFileName,
+        error: uploadError.message,
+        statusCode: uploadError.statusCode,
+        errorDetails: uploadError
+      });
+      
+      // Provide more specific error messages
+      if (uploadError.message?.includes('Bucket not found') || uploadError.message?.includes('The resource was not found')) {
+        return { error: 'Storage bucket "agreements" not found. Please create it in Supabase Storage.' };
+      }
+      if (uploadError.message?.includes('new row violates row-level security')) {
+        return { error: 'Permission denied. Check storage bucket policies.' };
+      }
+      if (uploadError.message?.includes('duplicate')) {
+        return { error: 'File already exists. Please use a different filename.' };
+      }
+      
+      return { error: uploadError.message || 'Failed to upload document to storage' };
+    }
+
+    if (!uploadData) {
+      return { error: 'Upload succeeded but no data returned' };
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('agreements')
+      .getPublicUrl(filePath);
+
+    if (!urlData?.publicUrl) {
+      return { error: 'Failed to generate public URL for uploaded document' };
+    }
+
+    return { url: urlData.publicUrl };
+  } catch (error: any) {
+    console.error('Unexpected error uploading location agreement document:', {
+      locationId,
+      error: error.message,
+      stack: error.stack
     });
-
-  if (uploadError) {
-    console.error('Error uploading location agreement document:', uploadError);
-    return null;
+    return { error: error.message || 'Unexpected error during upload' };
   }
-
-  // Get public URL
-  const { data: urlData } = supabase.storage
-    .from('agreements')
-    .getPublicUrl(filePath);
-
-  return urlData.publicUrl;
 }
 
 export async function updateLocationAgreementDocumentUrl(
@@ -249,13 +305,34 @@ export async function updateLocationAgreementDocumentUrl(
 ): Promise<boolean> {
   const supabase = createAdminClient();
   
+  // First verify the location exists
+  const location = await getLocationById(locationId);
+  if (!location) {
+    console.error(`Location not found: ${locationId}`);
+    return false;
+  }
+  
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from('locations') as any)
+  const { data, error } = await (supabase.from('locations') as any)
     .update({ agreement_document_url: documentUrl })
-    .eq('id', locationId);
+    .eq('id', locationId)
+    .select()
+    .single();
 
   if (error) {
-    console.error('Error updating location agreement document URL:', error);
+    console.error('Error updating location agreement document URL:', {
+      locationId,
+      documentUrl,
+      error: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    });
+    return false;
+  }
+
+  if (!data) {
+    console.error(`Failed to update location ${locationId}: No data returned`);
     return false;
   }
 

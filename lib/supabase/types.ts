@@ -152,6 +152,9 @@ export interface Agreement {
   status: AgreementStatus;
   document_url: string | null;
   notes: string | null;
+  signed_date: string | null;
+  signer_name: string | null;
+  signer_email: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
