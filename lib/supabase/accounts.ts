@@ -120,6 +120,7 @@ export async function createAccount(
         status: 'active' as const,
         notes: data.notes || null,
         sage_code: null, // Location sage code is separate from account sage code
+        agreement_document_url: null,
       };
 
       const location = await createLocation(locationData);
@@ -208,6 +209,7 @@ export async function updateAccount(
           status: 'active' as const,
           notes: data.notes || null,
           sage_code: null,
+          agreement_document_url: null,
         };
         await createLocation(locationData);
         console.log(`[updateAccount] Auto-created location for single-location account ${id}`);
