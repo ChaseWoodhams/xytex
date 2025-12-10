@@ -249,8 +249,8 @@ export async function updateLocationAgreementDocumentUrl(
 ): Promise<boolean> {
   const supabase = createAdminClient();
   
-  const { error } = await supabase
-    .from('locations')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from('locations') as any)
     .update({ agreement_document_url: documentUrl })
     .eq('id', locationId);
 
