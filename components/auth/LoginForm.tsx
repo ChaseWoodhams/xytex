@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import type { UserRole } from "@/lib/supabase/types";
 import { Mail, Lock, Loader2 } from "lucide-react";
 
 export default function LoginForm() {
@@ -50,7 +51,8 @@ export default function LoginForm() {
           .single();
         
         // Redirect admin and bd_team users to CRM, others to browse-donors
-        if (userProfile && (userProfile.role === 'admin' || userProfile.role === 'bd_team')) {
+        const profile = userProfile as { role: UserRole } | null;
+        if (profile && (profile.role === 'admin' || profile.role === 'bd_team')) {
           router.push("/admin");
         } else {
           router.push("/browse-donors");

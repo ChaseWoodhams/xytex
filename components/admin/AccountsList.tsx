@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { usePathname } from "next/navigation";
 import Link from "next/link";
 import type { Account } from "@/lib/supabase/types";
 import { Search, Building2, Trash2 } from "lucide-react";
@@ -66,16 +65,15 @@ function accountMatchesCountryFilter(
 }
 
 export default function AccountsList({ initialAccounts }: AccountsListProps) {
-  const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState("");
   const [countryFilter, setCountryFilter] = useState<CountryFilter>('ALL');
   const [accounts, setAccounts] = useState(initialAccounts);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Sync accounts state when initialAccounts prop changes (e.g., after navigation)
+  // Sync accounts state when initialAccounts prop changes
   useEffect(() => {
     setAccounts(initialAccounts);
-  }, [initialAccounts, pathname]);
+  }, [initialAccounts]);
 
   const filteredAccounts = useMemo(() => {
     return accounts.filter((account) => {
