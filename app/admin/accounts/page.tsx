@@ -39,14 +39,15 @@ export default async function AccountsPage() {
       
       // Collect countries from all locations (for both single and multi-location accounts)
       locations.forEach((location) => {
-        if (location.country) {
-          countries.add(location.country);
+        if (location.country && location.country.trim()) {
+          countries.add(location.country.trim());
         }
       });
       
       // For single-location accounts, also check account's country code
-      if (!isMultiLocation && account.udf_country_code) {
-        countries.add(account.udf_country_code);
+      // Always check account's country code as a fallback
+      if (account.udf_country_code && account.udf_country_code.trim()) {
+        countries.add(account.udf_country_code.trim());
       }
       
       if (isMultiLocation && locationCount > 1) {

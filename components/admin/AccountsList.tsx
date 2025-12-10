@@ -61,7 +61,12 @@ function accountMatchesCountryFilter(
     }
   }
   
-  return countries.some(country => normalizeCountry(country) === filter);
+  // Normalize all countries and check if any match the filter
+  const normalizedCountries = countries
+    .map(country => normalizeCountry(country))
+    .filter((country): country is CountryFilter => country !== null);
+  
+  return normalizedCountries.some(country => country === filter);
 }
 
 export default function AccountsList({ initialAccounts }: AccountsListProps) {
