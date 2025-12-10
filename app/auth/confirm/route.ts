@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
 
       // Redirect admin and bd_team users to CRM, respect 'next' param for others
       let redirectPath = next;
-      if (userProfile && (userProfile.role === 'admin' || userProfile.role === 'bd_team')) {
+      const role = (userProfile as { role?: string } | null)?.role;
+      if (role && (role === 'admin' || role === 'bd_team')) {
         redirectPath = '/admin';
       } else if (next === '/' || next === '/account') {
         redirectPath = '/browse-donors';
