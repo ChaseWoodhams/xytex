@@ -11,14 +11,28 @@ export async function GET(request: NextRequest) {
   if (token_hash && type) {
     const supabase = await createClient();
 
-    const { error } = await supabase.auth.verifyOtp({
+    const { error, data } = await supabase.auth.verifyOtp({
       type,
       token_hash,
     });
 
-    if (!error) {
-      // Redirect to the specified page or account page
-      const redirectUrl = new URL(next, request.url);
+    if (!error && data.user) {
+      // Check user role to determine redirect
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      // Redirect admin and bd_team users to CRM, respect 'next' param for others
+      let redirectPath = next;
+      if (userProfile && (userProfile.role === 'admin' || userProfile.role === 'bd_team')) {
+        redirectPath = '/admin';
+      } else if (next === '/' || next === '/account') {
+        redirectPath = '/browse-donors';
+      }
+
+      const redirectUrl = new URL(redirectPath, request.url);
       return NextResponse.redirect(redirectUrl);
     }
   }

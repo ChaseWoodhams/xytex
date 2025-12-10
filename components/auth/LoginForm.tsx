@@ -41,7 +41,20 @@ export default function LoginForm() {
       if (data.user) {
         // Small delay to ensure session is persisted in cookies
         await new Promise(resolve => setTimeout(resolve, 200));
-        router.push("/browse-donors");
+        
+        // Fetch user profile to check role
+        const { data: userProfile, error: profileError } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+        
+        // Redirect admin and bd_team users to CRM, others to browse-donors
+        if (userProfile && (userProfile.role === 'admin' || userProfile.role === 'bd_team')) {
+          router.push("/admin");
+        } else {
+          router.push("/browse-donors");
+        }
         router.refresh();
       }
     } catch (err: any) {
