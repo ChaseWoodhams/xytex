@@ -1,13 +1,13 @@
 import { getAccounts } from "@/lib/supabase/accounts";
 import { getLocationsByAccount } from "@/lib/supabase/locations";
-import type { Location } from "@/lib/supabase/types";
+import type { Account, Location } from "@/lib/supabase/types";
 import Link from "next/link";
 import { Building2, Plus, Search } from "lucide-react";
 import AccountsList from "@/components/admin/AccountsList";
 import InviteTeamMember from "@/components/admin/InviteTeamMember";
 
 export default async function AccountsPage() {
-  let accounts;
+  let accounts: Account[] = [];
   try {
     accounts = await getAccounts();
     console.log(`[AccountsPage] Loaded ${accounts.length} accounts`);
