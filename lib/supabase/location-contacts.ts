@@ -52,7 +52,7 @@ export async function createLocationContact(
   if (contactData.is_primary) {
     await supabase
       .from('location_contacts')
-      .update({ is_primary: false })
+      .update({ is_primary: false } as any)
       .eq('location_id', contactData.location_id)
       .eq('is_primary', true);
   }
@@ -86,7 +86,7 @@ export async function updateLocationContact(
     if (contact) {
       await supabase
         .from('location_contacts')
-        .update({ is_primary: false })
+        .update({ is_primary: false } as any)
         .eq('location_id', contact.location_id)
         .eq('is_primary', true)
         .neq('id', id);
