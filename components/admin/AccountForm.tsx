@@ -135,14 +135,14 @@ export default function AccountForm({ account, onSuccess, onCancel }: AccountFor
       const data = await response.json();
       
       // If onSuccess callback is provided, call it (for inline editing)
-      // Otherwise, navigate to the account detail page (for new accounts)
-      // Always refresh to ensure data is up to date
-      router.refresh();
-      
+      // Otherwise, navigate to the accounts list (for new accounts) so user can see the new account
       if (onSuccess) {
         onSuccess();
+        router.refresh(); // Refresh after callback
       } else {
-        router.push(`/admin/accounts/${data.id}`);
+        // For new accounts, navigate to accounts list
+        // The page is configured with dynamic rendering, so it will automatically fetch fresh data
+        router.push('/admin/accounts');
       }
     } catch (err: any) {
       setError(err.message || "An error occurred");
