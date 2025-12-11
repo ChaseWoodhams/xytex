@@ -44,35 +44,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Add timeout to prevent hanging
+      // Add timeout to prevent hanging - use a simpler approach
       const profileQuery = supabase
         .from('users')
         .select('*')
         .eq('id', authUser.id)
         .single();
 
-      // Helper function to create a properly typed timeout
-      // Accepts a thenable (like Supabase query builders)
-      const withTimeout = <T,>(thenable: { then: (onFulfilled: (value: T) => void, onRejected: (error: unknown) => void) => void }, timeoutMs: number): Promise<T> => {
-        return new Promise<T>((resolve, reject) => {
-          const timeoutId = setTimeout(() => {
-            reject(new Error('Profile fetch timeout'));
-          }, timeoutMs);
-          
-          Promise.resolve(thenable)
-            .then((result) => {
-              clearTimeout(timeoutId);
-              resolve(result);
-            })
-            .catch((error) => {
-              clearTimeout(timeoutId);
-              reject(error);
-            });
-        });
-      };
-
       try {
-        const result = await withTimeout(profileQuery, TIMEOUT_MS);
+        // Create a timeout that will throw if the query takes too long
+        let timeoutId: NodeJS.Timeout;
+        const timeoutError = new Error('Profile fetch timeout');
+        
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(timeoutError), TIMEOUT_MS);
+        });
+
+        // Race the query against the timeout
+        const queryPromise = Promise.resolve(profileQuery);
+        const result = await Promise.race([
+          queryPromise.then((r) => {
+            clearTimeout(timeoutId);
+            return r;
+          }),
+          timeoutPromise,
+        ]) as Awaited<ReturnType<typeof profileQuery>>;
 
         if (result.error) {
           // If it's a "not found" error and we haven't retried, try once more
