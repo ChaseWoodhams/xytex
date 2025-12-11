@@ -45,26 +45,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Add timeout to prevent hanging
-      const profilePromise = supabase
+      const profileQuery = supabase
         .from('users')
         .select('*')
         .eq('id', authUser.id)
         .single();
 
-      let timeoutId: NodeJS.Timeout | undefined;
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error('Profile fetch timeout')), TIMEOUT_MS);
-      });
+      // Helper function to create a properly typed timeout
+      const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+        return new Promise<T>((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            reject(new Error('Profile fetch timeout'));
+          }, timeoutMs);
+          
+          promise
+            .then((result) => {
+              clearTimeout(timeoutId);
+              resolve(result);
+            })
+            .catch((error) => {
+              clearTimeout(timeoutId);
+              reject(error);
+            });
+        });
+      };
 
       try {
-        type ProfileResult = Awaited<typeof profilePromise>;
-        const result = await Promise.race([
-          profilePromise.then((result) => {
-            if (timeoutId) clearTimeout(timeoutId);
-            return result;
-          }),
-          timeoutPromise,
-        ]) as ProfileResult;
+        const result = await withTimeout(profileQuery, TIMEOUT_MS);
 
         if (result.error) {
           // If it's a "not found" error and we haven't retried, try once more
