@@ -61,14 +61,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         // Race the query against the timeout
-        const queryPromise = Promise.resolve(profileQuery);
+        // Type the query result explicitly using the actual Supabase response type
+        const queryPromise = Promise.resolve(profileQuery) as Promise<{ data: User | null; error: { message: string; code?: string; details?: string; hint?: string } | null }>;
         const result = await Promise.race([
           queryPromise.then((r) => {
             clearTimeout(timeoutId);
             return r;
           }),
           timeoutPromise,
-        ]) as Awaited<ReturnType<typeof profileQuery>>;
+        ]);
 
         if (result.error) {
           // If it's a "not found" error and we haven't retried, try once more
