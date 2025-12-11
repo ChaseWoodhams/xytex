@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Location, Account, Agreement } from "@/lib/supabase/types";
-import { ArrowLeft, MapPin, Building2, FileText, Trash2, Upload, Download, X } from "lucide-react";
+import { ArrowLeft, MapPin, Building2, FileText, Trash2, Upload, Download, X, Shield } from "lucide-react";
 import AgreementsList from "./AgreementsList";
 import LocationContacts from "./LocationContacts";
 import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
@@ -23,7 +23,7 @@ export default function LocationDetailView({
   isMultiLocation,
 }: LocationDetailViewProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"overview" | "agreements">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "agreements" | "license">("overview");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -35,11 +35,13 @@ export default function LocationDetailView({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const licenseFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Only show agreements tab if this is a multi-location account
+  // Only show agreements and license tabs if this is a multi-location account
+  // For single-location accounts, these tabs are on the account page
   // Use account_type or fallback to isMultiLocation flag
   const shouldShowAgreements = account.account_type === 'multi_location' || isMultiLocation;
   const tabs = [
     { id: "overview", label: "Overview", icon: MapPin },
+    ...(shouldShowAgreements ? [{ id: "license" as const, label: "License", icon: Shield }] : []),
     ...(shouldShowAgreements ? [{ id: "agreements" as const, label: "Agreements", icon: FileText }] : []),
   ];
 
@@ -244,29 +246,27 @@ export default function LocationDetailView({
       </div>
 
       {/* Tabs */}
-      {shouldShowAgreements && (
-        <div className="border-b border-navy-200 mb-6">
-          <nav className="flex gap-4">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
-                    activeTab === tab.id
-                      ? "border-gold-600 text-gold-600"
-                      : "border-transparent text-navy-600 hover:text-navy-900"
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-      )}
+      <div className="border-b border-navy-200 mb-6">
+        <nav className="flex gap-4">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
+                  activeTab === tab.id
+                    ? "border-gold-600 text-gold-600"
+                    : "border-transparent text-navy-600 hover:text-navy-900"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
 
       {/* Tab Content */}
       <div>
@@ -465,97 +465,6 @@ export default function LocationDetailView({
           )}
         </div>
 
-        {/* Location License Document */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-heading font-semibold text-navy-900 mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-gold-600" />
-            Location License
-          </h2>
-          
-          {currentLicenseUrl ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <FileText className="w-5 h-5 text-navy-600" />
-                  <div>
-                    <p className="text-sm font-medium text-navy-900">License Document</p>
-                    <p className="text-xs text-navy-600">PDF document uploaded</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <a
-                    href={currentLicenseUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-2 text-sm bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors flex items-center gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    View Document
-                  </a>
-                  <button
-                    onClick={handleRemoveLicense}
-                    disabled={isUploadingLicense}
-                    className="px-3 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <X className="w-4 h-4" />
-                    Remove
-                  </button>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-navy-700 mb-2">
-                  Replace License Document
-                </label>
-                <input
-                  ref={licenseFileInputRef}
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  onChange={handleLicenseFileSelect}
-                  disabled={isUploadingLicense}
-                  className="hidden"
-                />
-                <button
-                  onClick={() => licenseFileInputRef.current?.click()}
-                  disabled={isUploadingLicense}
-                  className="px-4 py-2 text-sm bg-navy-100 text-navy-700 rounded-lg hover:bg-navy-200 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Upload className="w-4 h-4" />
-                  {isUploadingLicense ? 'Uploading...' : 'Upload New License'}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-navy-600">
-                Upload a location license document (PDF format)
-              </p>
-              <input
-                ref={licenseFileInputRef}
-                type="file"
-                accept=".pdf,application/pdf"
-                onChange={handleLicenseFileSelect}
-                disabled={isUploadingLicense}
-                className="hidden"
-              />
-              <button
-                onClick={() => licenseFileInputRef.current?.click()}
-                disabled={isUploadingLicense}
-                className="px-4 py-2 bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Upload className="w-4 h-4" />
-                {isUploadingLicense ? 'Uploading...' : 'Upload License Document'}
-              </button>
-            </div>
-          )}
-
-          {uploadLicenseError && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{uploadLicenseError}</p>
-            </div>
-          )}
-        </div>
-
         {/* Account UDF Information */}
         {(account.sage_code || account.udf_clinic_name || account.udf_shipto_name || account.udf_country_code) && (
           <div className="bg-white rounded-xl shadow-md p-6">
@@ -693,6 +602,100 @@ export default function LocationDetailView({
             <p className="text-navy-700 whitespace-pre-wrap">{account.udf_notes}</p>
           </div>
         )}
+          </div>
+        )}
+
+        {activeTab === "license" && shouldShowAgreements && (
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-heading font-semibold text-navy-900 flex items-center gap-2">
+                <Shield className="w-6 h-6 text-gold-600" />
+                Location License
+              </h2>
+            </div>
+            
+            {currentLicenseUrl ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-5 h-5 text-navy-600" />
+                    <div>
+                      <p className="text-sm font-medium text-navy-900">License Document</p>
+                      <p className="text-xs text-navy-600">PDF document uploaded</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={currentLicenseUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-2 text-sm bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      View Document
+                    </a>
+                    <button
+                      onClick={handleRemoveLicense}
+                      disabled={isUploadingLicense}
+                      className="px-3 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <X className="w-4 h-4" />
+                      Remove
+                    </button>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-navy-700 mb-2">
+                    Replace License Document
+                  </label>
+                  <input
+                    ref={licenseFileInputRef}
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    onChange={handleLicenseFileSelect}
+                    disabled={isUploadingLicense}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => licenseFileInputRef.current?.click()}
+                    disabled={isUploadingLicense}
+                    className="px-4 py-2 text-sm bg-navy-100 text-navy-700 rounded-lg hover:bg-navy-200 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Upload className="w-4 h-4" />
+                    {isUploadingLicense ? 'Uploading...' : 'Upload New License'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-navy-600">
+                  Upload a location license document (PDF format)
+                </p>
+                <input
+                  ref={licenseFileInputRef}
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  onChange={handleLicenseFileSelect}
+                  disabled={isUploadingLicense}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => licenseFileInputRef.current?.click()}
+                  disabled={isUploadingLicense}
+                  className="px-4 py-2 bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Upload className="w-4 h-4" />
+                  {isUploadingLicense ? 'Uploading...' : 'Upload License Document'}
+                </button>
+              </div>
+            )}
+
+            {uploadLicenseError && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{uploadLicenseError}</p>
+              </div>
+            )}
           </div>
         )}
 

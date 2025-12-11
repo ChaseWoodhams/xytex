@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type {
@@ -10,7 +10,7 @@ import type {
   Activity,
   Note,
 } from "@/lib/supabase/types";
-import { ArrowLeft, Building2, MapPin, FileText, Clock, StickyNote, Plus, Phone, Mail, Trash2, Edit, X } from "lucide-react";
+import { ArrowLeft, Building2, MapPin, FileText, Clock, StickyNote, Plus, Phone, Mail, Trash2, Edit, X, Shield, Upload, Download } from "lucide-react";
 import AccountForm from "./AccountForm";
 import LocationsList from "./LocationsList";
 import AgreementsList from "./AgreementsList";
@@ -41,23 +41,31 @@ export default function AccountDetailView({
   currentUserId,
 }: AccountDetailViewProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"overview" | "locations" | "agreements" | "activities" | "notes">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "locations" | "agreements" | "activities" | "notes" | "license">("overview");
   const [locationFilter, setLocationFilter] = useState<'all' | 'needs_contract' | 'active' | 'expired' | 'draft'>('all');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showContactsModal, setShowContactsModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isUploadingLicense, setIsUploadingLicense] = useState(false);
+  const [uploadLicenseError, setUploadLicenseError] = useState<string | null>(null);
+  const licenseFileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Get the first location for single-location accounts
+  const firstLocation = locations.length > 0 ? locations[0] : null;
+  const [currentLicenseUrl, setCurrentLicenseUrl] = useState<string | null>(firstLocation?.license_document_url || null);
 
   // Determine if this is a multi-location account based on account_type or actual location count
   const isMultiLocation = account.account_type === 'multi_location' || locations.length > 1;
   
   // Only show locations tab if it's a multi-location account and there are multiple locations
-  // Only show agreements tab if it's a single-location account (for multi-location accounts, agreements are on location pages)
-  type TabId = "overview" | "locations" | "agreements" | "activities" | "notes";
+  // Only show agreements and license tabs if it's a single-location account (for multi-location accounts, these are on location pages)
+  type TabId = "overview" | "locations" | "agreements" | "activities" | "notes" | "license";
   const tabs: Array<{ id: TabId; label: string; icon: typeof Building2 }> = [
     { id: "overview", label: "Overview", icon: Building2 },
     ...(isMultiLocation && locations.length > 1 ? [{ id: "locations" as TabId, label: "Locations", icon: MapPin }] : []),
     ...(!isMultiLocation || locations.length <= 1 ? [{ id: "agreements" as TabId, label: "Agreements", icon: FileText }] : []),
+    ...(!isMultiLocation || locations.length <= 1 ? [{ id: "license" as TabId, label: "License", icon: Shield }] : []),
     { id: "activities", label: "Activities", icon: Clock },
     { id: "notes", label: "Notes", icon: StickyNote },
   ];
@@ -67,7 +75,7 @@ export default function AccountDetailView({
     if (activeTab === "locations" && !isMultiLocation) {
       setTimeout(() => setActiveTab("overview"), 0);
     }
-    if ((activeTab === "agreements" || activeTab === "activities" || activeTab === "notes") && isMultiLocation && locations.length > 1) {
+    if ((activeTab === "agreements" || activeTab === "license" || activeTab === "activities" || activeTab === "notes") && isMultiLocation && locations.length > 1) {
       setTimeout(() => setActiveTab("overview"), 0);
     }
   }, [activeTab, isMultiLocation, locations.length]);
@@ -93,6 +101,97 @@ export default function AccountDetailView({
       setIsDeleting(false);
     }
   };
+
+  const handleLicenseFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!firstLocation) {
+      setUploadLicenseError('No location found. Please add a location first.');
+      return;
+    }
+
+    // Validate file type
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setUploadLicenseError('Only PDF files are allowed');
+      return;
+    }
+
+    setIsUploadingLicense(true);
+    setUploadLicenseError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`/api/admin/locations/${firstLocation.id}/upload-license`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload license document');
+      }
+
+      const data = await response.json();
+      setCurrentLicenseUrl(data.document_url);
+      router.refresh();
+    } catch (error: any) {
+      console.error('Error uploading license document:', error);
+      setUploadLicenseError(error.message || 'Failed to upload license document');
+    } finally {
+      setIsUploadingLicense(false);
+      if (licenseFileInputRef.current) {
+        licenseFileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveLicense = async () => {
+    if (!confirm('Are you sure you want to remove this license document?')) {
+      return;
+    }
+
+    if (!firstLocation) {
+      return;
+    }
+
+    setIsUploadingLicense(true);
+    setUploadLicenseError(null);
+
+    try {
+      const response = await fetch(`/api/admin/locations/${firstLocation.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          license_document_url: null,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to remove license document');
+      }
+
+      setCurrentLicenseUrl(null);
+      router.refresh();
+    } catch (error: any) {
+      console.error('Error removing license document:', error);
+      setUploadLicenseError(error.message || 'Failed to remove license document');
+    } finally {
+      setIsUploadingLicense(false);
+    }
+  };
+
+  // Update license URL when location changes
+  useEffect(() => {
+    if (firstLocation) {
+      setCurrentLicenseUrl(firstLocation.license_document_url);
+    }
+  }, [firstLocation?.license_document_url]);
 
   // If editing, show the form
   if (isEditing) {
@@ -701,6 +800,110 @@ export default function AccountDetailView({
             accountId={account.id}
             activities={activities}
           />
+        )}
+
+        {/* License tab - only for single-location accounts */}
+        {activeTab === "license" && (!isMultiLocation || locations.length <= 1) && (
+          firstLocation?.id ? (
+            <div className="bg-white rounded-xl shadow-md p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-heading font-semibold text-navy-900 flex items-center gap-2">
+                  <Shield className="w-6 h-6 text-gold-600" />
+                  Location License
+                </h2>
+              </div>
+              
+              {currentLicenseUrl ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-navy-600" />
+                      <div>
+                        <p className="text-sm font-medium text-navy-900">License Document</p>
+                        <p className="text-xs text-navy-600">PDF document uploaded</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={currentLicenseUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-2 text-sm bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        View Document
+                      </a>
+                      <button
+                        onClick={handleRemoveLicense}
+                        disabled={isUploadingLicense}
+                        className="px-3 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <X className="w-4 h-4" />
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-navy-700 mb-2">
+                      Replace License Document
+                    </label>
+                    <input
+                      ref={licenseFileInputRef}
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      onChange={handleLicenseFileSelect}
+                      disabled={isUploadingLicense}
+                      className="hidden"
+                    />
+                    <button
+                      onClick={() => licenseFileInputRef.current?.click()}
+                      disabled={isUploadingLicense}
+                      className="px-4 py-2 text-sm bg-navy-100 text-navy-700 rounded-lg hover:bg-navy-200 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Upload className="w-4 h-4" />
+                      {isUploadingLicense ? 'Uploading...' : 'Upload New License'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-navy-600">
+                    Upload a location license document (PDF format)
+                  </p>
+                  <input
+                    ref={licenseFileInputRef}
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    onChange={handleLicenseFileSelect}
+                    disabled={isUploadingLicense}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => licenseFileInputRef.current?.click()}
+                    disabled={isUploadingLicense}
+                    className="px-4 py-2 bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Upload className="w-4 h-4" />
+                    {isUploadingLicense ? 'Uploading...' : 'Upload License Document'}
+                  </button>
+                </div>
+              )}
+
+              {uploadLicenseError && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{uploadLicenseError}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl shadow-md p-6">
+              <div className="text-center py-12">
+                <Shield className="w-16 h-16 text-navy-300 mx-auto mb-4" />
+                <p className="text-navy-600 mb-4">No location found. Please add a location to upload a license.</p>
+              </div>
+            </div>
+          )
         )}
 
         {/* Notes tab - only for single-location accounts */}

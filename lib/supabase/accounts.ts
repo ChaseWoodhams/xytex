@@ -133,6 +133,7 @@ export async function createAccount(
           notes: data.notes || null,
           sage_code: null, // Location sage code is separate from account sage code
           agreement_document_url: null,
+          license_document_url: null,
         };
 
         const location = await createLocation(locationData);
