@@ -56,10 +56,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
 
       try {
+        type ProfileResult = Awaited<typeof profilePromise>;
         const result = await Promise.race([
           profilePromise,
           timeoutPromise,
-        ]);
+        ]) as ProfileResult;
 
         if (result.error) {
           // If it's a "not found" error and we haven't retried, try once more
