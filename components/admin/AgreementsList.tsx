@@ -21,6 +21,8 @@ export default function AgreementsList({ accountId, locationId, agreements }: Ag
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [editingAgreement, setEditingAgreement] = useState<Agreement | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadSignedDate, setUploadSignedDate] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,12 +41,38 @@ export default function AgreementsList({ accountId, locationId, agreements }: Ag
       return;
     }
 
+    // Store the file and show modal for signed date input
+    setShowUploadModal(true);
+    // Store file in a way we can access it later
+    if (fileInputRef.current) {
+      (fileInputRef.current as any).storedFile = file;
+    }
+  };
+
+  const handleUploadWithSignedDate = async () => {
+    const file = (fileInputRef.current as any)?.storedFile;
+    if (!file) {
+      setUploadError('No file selected');
+      setShowUploadModal(false);
+      return;
+    }
+
+    // Validate locationId
+    if (!locationId) {
+      setUploadError('Location ID is required');
+      setShowUploadModal(false);
+      return;
+    }
+
     setIsUploading(true);
     setUploadError(null);
 
     try {
       const formData = new FormData();
       formData.append('file', file);
+      if (uploadSignedDate) {
+        formData.append('signed_date', uploadSignedDate);
+      }
 
       const response = await fetch(`/api/admin/locations/${locationId}/upload`, {
         method: 'POST',
@@ -77,10 +105,13 @@ export default function AgreementsList({ accountId, locationId, agreements }: Ag
         console.log('Extracted metadata from PDF:', responseData.extracted_metadata);
       }
 
-      // Clear the file input
+      // Clear the file input and modal state
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
+        (fileInputRef.current as any).storedFile = null;
       }
+      setUploadSignedDate('');
+      setShowUploadModal(false);
       
       // Refresh the page to show the new agreement
       // Use both refresh and push to ensure data is updated
@@ -97,6 +128,7 @@ export default function AgreementsList({ accountId, locationId, agreements }: Ag
       setIsUploading(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
+        (fileInputRef.current as any).storedFile = null;
       }
     }
   };
@@ -205,7 +237,10 @@ export default function AgreementsList({ accountId, locationId, agreements }: Ag
             className="hidden"
           />
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => {
+              setUploadSignedDate('');
+              fileInputRef.current?.click();
+            }}
             disabled={isUploading}
             className="btn btn-primary"
           >
@@ -531,6 +566,76 @@ export default function AgreementsList({ accountId, locationId, agreements }: Ag
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Agreement Modal with Signed Date Input */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-navy-200">
+              <h3 className="text-xl font-heading font-semibold text-navy-900">
+                Upload Service Agreement
+              </h3>
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setUploadSignedDate('');
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                    (fileInputRef.current as any).storedFile = null;
+                  }
+                }}
+                className="p-2 text-navy-600 hover:text-navy-900 hover:bg-navy-50 rounded-lg transition-colors"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label htmlFor="upload_signed_date" className="block text-sm font-medium text-navy-700 mb-1">
+                  Contract Sign Date (Optional)
+                </label>
+                <input
+                  type="date"
+                  id="upload_signed_date"
+                  value={uploadSignedDate}
+                  onChange={(e) => setUploadSignedDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-navy-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
+                />
+                <p className="mt-1 text-xs text-navy-500">
+                  Enter the date the contract was signed. Leave blank if unknown.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-navy-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setUploadSignedDate('');
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = '';
+                      (fileInputRef.current as any).storedFile = null;
+                    }
+                  }}
+                  className="btn btn-secondary"
+                  disabled={isUploading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUploadWithSignedDate}
+                  className="btn btn-primary"
+                  disabled={isUploading}
+                >
+                  {isUploading ? 'Uploading...' : 'Upload Agreement'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -28,6 +28,7 @@ export async function POST(
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
+    const signedDate = formData.get('signed_date') as string | null;
 
     if (!file) {
       return NextResponse.json(
@@ -82,6 +83,7 @@ export async function POST(
 
     // Create an agreement record for this uploaded document
     // Use extracted metadata where available, fallback to defaults
+    // Manual signed_date from form takes precedence over extracted metadata
     const agreementData = {
       account_id: location.account_id,
       location_id: id,
@@ -95,7 +97,7 @@ export async function POST(
       status: 'active' as const,
       document_url: documentUrl,
       notes: `Uploaded agreement document: ${file.name}`,
-      signed_date: extractedMetadata.signedDate || null,
+      signed_date: signedDate || extractedMetadata.signedDate || null,
       signer_name: extractedMetadata.signerName || null,
       signer_email: extractedMetadata.signerEmail || null,
       created_by: user.id,

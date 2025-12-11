@@ -29,7 +29,11 @@ export default function LocationDetailView({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [currentDocumentUrl, setCurrentDocumentUrl] = useState<string | null>(location.agreement_document_url);
+  const [isUploadingLicense, setIsUploadingLicense] = useState(false);
+  const [uploadLicenseError, setUploadLicenseError] = useState<string | null>(null);
+  const [currentLicenseUrl, setCurrentLicenseUrl] = useState<string | null>(location.license_document_url);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const licenseFileInputRef = useRef<HTMLInputElement>(null);
 
   // Only show agreements tab if this is a multi-location account
   // Use account_type or fallback to isMultiLocation flag
@@ -112,6 +116,82 @@ export default function LocationDetailView({
       setUploadError(error.message || 'Failed to remove document');
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleLicenseFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setUploadLicenseError('Only PDF files are allowed');
+      return;
+    }
+
+    setIsUploadingLicense(true);
+    setUploadLicenseError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`/api/admin/locations/${location.id}/upload-license`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload license document');
+      }
+
+      const data = await response.json();
+      setCurrentLicenseUrl(data.document_url);
+      router.refresh();
+    } catch (error: any) {
+      console.error('Error uploading license document:', error);
+      setUploadLicenseError(error.message || 'Failed to upload license document');
+    } finally {
+      setIsUploadingLicense(false);
+      if (licenseFileInputRef.current) {
+        licenseFileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveLicense = async () => {
+    if (!confirm('Are you sure you want to remove this license document?')) {
+      return;
+    }
+
+    setIsUploadingLicense(true);
+    setUploadLicenseError(null);
+
+    try {
+      // Update location to remove license document URL
+      const response = await fetch(`/api/admin/locations/${location.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          license_document_url: null,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to remove license document');
+      }
+
+      setCurrentLicenseUrl(null);
+      router.refresh();
+    } catch (error: any) {
+      console.error('Error removing license document:', error);
+      setUploadLicenseError(error.message || 'Failed to remove license document');
+    } finally {
+      setIsUploadingLicense(false);
     }
   };
 
@@ -381,6 +461,97 @@ export default function LocationDetailView({
           {uploadError && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-600">{uploadError}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Location License Document */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-heading font-semibold text-navy-900 mb-4 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-gold-600" />
+            Location License
+          </h2>
+          
+          {currentLicenseUrl ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-navy-600" />
+                  <div>
+                    <p className="text-sm font-medium text-navy-900">License Document</p>
+                    <p className="text-xs text-navy-600">PDF document uploaded</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={currentLicenseUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2 text-sm bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    View Document
+                  </a>
+                  <button
+                    onClick={handleRemoveLicense}
+                    disabled={isUploadingLicense}
+                    className="px-3 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <X className="w-4 h-4" />
+                    Remove
+                  </button>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-navy-700 mb-2">
+                  Replace License Document
+                </label>
+                <input
+                  ref={licenseFileInputRef}
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  onChange={handleLicenseFileSelect}
+                  disabled={isUploadingLicense}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => licenseFileInputRef.current?.click()}
+                  disabled={isUploadingLicense}
+                  className="px-4 py-2 text-sm bg-navy-100 text-navy-700 rounded-lg hover:bg-navy-200 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Upload className="w-4 h-4" />
+                  {isUploadingLicense ? 'Uploading...' : 'Upload New License'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-navy-600">
+                Upload a location license document (PDF format)
+              </p>
+              <input
+                ref={licenseFileInputRef}
+                type="file"
+                accept=".pdf,application/pdf"
+                onChange={handleLicenseFileSelect}
+                disabled={isUploadingLicense}
+                className="hidden"
+              />
+              <button
+                onClick={() => licenseFileInputRef.current?.click()}
+                disabled={isUploadingLicense}
+                className="px-4 py-2 bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Upload className="w-4 h-4" />
+                {isUploadingLicense ? 'Uploading...' : 'Upload License Document'}
+              </button>
+            </div>
+          )}
+
+          {uploadLicenseError && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{uploadLicenseError}</p>
             </div>
           )}
         </div>
