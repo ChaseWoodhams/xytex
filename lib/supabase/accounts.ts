@@ -243,6 +243,7 @@ export async function updateAccount(
           notes: data.notes || null,
           sage_code: null,
           agreement_document_url: null,
+          license_document_url: null,
         };
         const location = await createLocation(locationData);
         if (location) {
