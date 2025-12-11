@@ -24,14 +24,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserProfile = async (authUser: SupabaseAuthUser | null) => {
+  const fetchUserProfile = async (authUser: SupabaseAuthUser | null, retryCount = 0) => {
     if (!authUser) {
       setUserProfile(null);
       return;
     }
 
+    const MAX_RETRIES = 2;
+    const TIMEOUT_MS = 8000; // Increased to 8 seconds
+
     try {
       const supabase = createClient();
+      
+      // Verify auth session is valid before querying
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.warn('No valid session for profile fetch:', sessionError?.message);
+        setUserProfile(null);
+        return;
+      }
+
       // Add timeout to prevent hanging
       const profilePromise = supabase
         .from('users')
@@ -40,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), TIMEOUT_MS)
       );
 
       try {
@@ -50,14 +62,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ]);
 
         if (result.error) {
-          console.error('Error fetching user profile:', result.error);
+          // If it's a "not found" error and we haven't retried, try once more
+          if (result.error.code === 'PGRST116' && retryCount < MAX_RETRIES) {
+            console.warn(`User profile not found, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+            // Wait a bit before retry
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return fetchUserProfile(authUser, retryCount + 1);
+          }
+          console.error('Error fetching user profile:', {
+            message: result.error.message,
+            code: result.error.code,
+            details: result.error.details,
+            hint: result.error.hint
+          });
           setUserProfile(null);
-        } else {
+        } else if (result.data) {
           setUserProfile(result.data);
+        } else {
+          // No error but no data - profile might not exist yet
+          console.warn('User profile query returned no data for user:', authUser.id);
+          setUserProfile(null);
         }
       } catch (raceError) {
         // Handle timeout or other race errors
         if (raceError instanceof Error) {
+          // Retry on timeout if we haven't exceeded max retries
+          if (raceError.message === 'Profile fetch timeout' && retryCount < MAX_RETRIES) {
+            console.warn(`Profile fetch timeout, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return fetchUserProfile(authUser, retryCount + 1);
+          }
           console.error('Error fetching user profile:', raceError.message);
         } else {
           console.error('Error fetching user profile:', raceError);
@@ -156,7 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
-      // Periodic session refresh check (every 2 minutes to catch expiring sessions)
+      // Periodic session refresh check (every 5 minutes to reduce load)
       const refreshInterval = setInterval(async () => {
         try {
           const { data: { session }, error } = await supabase.auth.getSession();
@@ -164,11 +198,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error('Error refreshing session:', error);
             // If we have a user but session check fails, try to refresh
             if (user) {
-              const { data: { session: retrySession } } = await supabase.auth.refreshSession();
-              if (retrySession) {
-                setUser(retrySession.user);
-                await fetchUserProfile(retrySession.user);
-              } else {
+              try {
+                const { data: { session: retrySession } } = await supabase.auth.refreshSession();
+                if (retrySession) {
+                  setUser(retrySession.user);
+                  fetchUserProfile(retrySession.user).catch(console.error);
+                } else {
+                  setUser(null);
+                  setUserProfile(null);
+                }
+              } catch (refreshError) {
+                console.error('Error refreshing session:', refreshError);
                 setUser(null);
                 setUserProfile(null);
               }
@@ -180,14 +220,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (!user && session.user) {
               console.log('Recovering user session');
               setUser(session.user);
-              await fetchUserProfile(session.user);
+              fetchUserProfile(session.user).catch(console.error);
             } else if (user && session.user?.id !== user.id) {
               // User changed
               setUser(session.user);
-              await fetchUserProfile(session.user);
-            } else if (user) {
-              // Just refresh profile
-              await fetchUserProfile(session.user);
+              fetchUserProfile(session.user).catch(console.error);
+            } else if (user && !userProfile) {
+              // Only refresh profile if we don't have one (don't spam queries)
+              fetchUserProfile(session.user).catch(console.error);
             }
           } else if (user) {
             // Session expired but we still have user state - try to refresh
@@ -195,7 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
               if (refreshedSession) {
                 setUser(refreshedSession.user);
-                await fetchUserProfile(refreshedSession.user);
+                fetchUserProfile(refreshedSession.user).catch(console.error);
               } else {
                 setUser(null);
                 setUserProfile(null);
@@ -209,7 +249,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (error) {
           console.error('Error in periodic session check:', error);
         }
-      }, 2 * 60 * 1000); // 2 minutes - more frequent to catch issues sooner
+      }, 5 * 60 * 1000); // 5 minutes - reduced frequency to avoid timeout issues
 
       return () => {
         subscription.unsubscribe();
