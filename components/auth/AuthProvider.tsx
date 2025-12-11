@@ -52,13 +52,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       // Helper function to create a properly typed timeout
-      const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+      // Accepts a thenable (like Supabase query builders)
+      const withTimeout = <T,>(thenable: { then: (onFulfilled: (value: T) => void, onRejected: (error: unknown) => void) => void }, timeoutMs: number): Promise<T> => {
         return new Promise<T>((resolve, reject) => {
           const timeoutId = setTimeout(() => {
             reject(new Error('Profile fetch timeout'));
           }, timeoutMs);
           
-          promise
+          Promise.resolve(thenable)
             .then((result) => {
               clearTimeout(timeoutId);
               resolve(result);
