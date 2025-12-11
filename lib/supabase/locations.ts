@@ -434,14 +434,15 @@ export async function uploadLocationLicenseDocument(
 export async function updateLocationLicenseDocumentUrl(
   locationId: string,
   documentUrl: string | null
-): Promise<boolean> {
+): Promise<{ success: boolean; error?: string }> {
   const supabase = createAdminClient();
   
   // First verify the location exists
   const location = await getLocationById(locationId);
   if (!location) {
-    console.error(`Location not found: ${locationId}`);
-    return false;
+    const errorMsg = `Location not found: ${locationId}`;
+    console.error(errorMsg);
+    return { success: false, error: errorMsg };
   }
   
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -452,22 +453,27 @@ export async function updateLocationLicenseDocumentUrl(
     .single();
 
   if (error) {
-    console.error('Error updating location license document URL:', {
+    const errorDetails = {
       locationId,
       documentUrl,
       error: error.message,
       details: error.details,
       hint: error.hint,
       code: error.code
-    });
-    return false;
+    };
+    console.error('Error updating location license document URL:', errorDetails);
+    return { 
+      success: false, 
+      error: error.message || `Database error: ${error.code || 'Unknown error'}` 
+    };
   }
 
   if (!data) {
-    console.error(`Failed to update location ${locationId}: No data returned`);
-    return false;
+    const errorMsg = `Failed to update location ${locationId}: No data returned`;
+    console.error(errorMsg);
+    return { success: false, error: errorMsg };
   }
 
-  return true;
+  return { success: true };
 }
 

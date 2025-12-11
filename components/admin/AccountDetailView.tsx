@@ -10,7 +10,7 @@ import type {
   Activity,
   Note,
 } from "@/lib/supabase/types";
-import { ArrowLeft, Building2, MapPin, FileText, Clock, StickyNote, Plus, Phone, Mail, Trash2, Edit, X, Shield, Upload, Download } from "lucide-react";
+import { ArrowLeft, Building2, MapPin, FileText, Clock, StickyNote, Plus, Phone, Mail, Trash2, Edit, X, Shield, Upload, Download, Eye } from "lucide-react";
 import AccountForm from "./AccountForm";
 import LocationsList from "./LocationsList";
 import AgreementsList from "./AgreementsList";
@@ -50,6 +50,7 @@ export default function AccountDetailView({
   const [isUploadingLicense, setIsUploadingLicense] = useState(false);
   const [uploadLicenseError, setUploadLicenseError] = useState<string | null>(null);
   const licenseFileInputRef = useRef<HTMLInputElement>(null);
+  const [viewingLicensePdf, setViewingLicensePdf] = useState<string | null>(null);
   
   // Get the first location for single-location accounts
   const firstLocation = locations.length > 0 ? locations[0] : null;
@@ -824,22 +825,29 @@ export default function AccountDetailView({
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setViewingLicensePdf(currentLicenseUrl)}
+                        className="p-2 text-navy-600 hover:text-gold-600 hover:bg-gold-50 rounded-lg transition-colors"
+                        title="View PDF"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
                       <a
                         href={currentLicenseUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3 py-2 text-sm bg-gold-600 text-white rounded-lg hover:bg-gold-700 transition-colors flex items-center gap-2"
+                        className="p-2 text-navy-600 hover:text-gold-600 hover:bg-gold-50 rounded-lg transition-colors"
+                        title="Download PDF"
                       >
                         <Download className="w-4 h-4" />
-                        View Document
                       </a>
                       <button
                         onClick={handleRemoveLicense}
                         disabled={isUploadingLicense}
-                        className="px-3 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Remove License"
                       >
                         <X className="w-4 h-4" />
-                        Remove
                       </button>
                     </div>
                   </div>
@@ -915,6 +923,50 @@ export default function AccountDetailView({
           />
         )}
       </div>
+
+      {/* License PDF Viewer Modal */}
+      {viewingLicensePdf && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-full max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-navy-200">
+              <h3 className="text-lg font-heading font-semibold text-navy-900">
+                License Document
+              </h3>
+              <button
+                onClick={() => setViewingLicensePdf(null)}
+                className="p-2 text-navy-600 hover:text-navy-900 hover:bg-navy-50 rounded-lg transition-colors"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <iframe
+                src={viewingLicensePdf}
+                className="w-full h-full border-0"
+                title="License PDF Viewer"
+              />
+            </div>
+            <div className="p-4 border-t border-navy-200 flex items-center justify-between">
+              <a
+                href={viewingLicensePdf}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download PDF
+              </a>
+              <button
+                onClick={() => setViewingLicensePdf(null)}
+                className="btn btn-secondary"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <DeleteConfirmationDialog
         isOpen={showDeleteDialog}

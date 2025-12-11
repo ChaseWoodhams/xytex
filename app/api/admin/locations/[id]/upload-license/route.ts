@@ -55,11 +55,12 @@ export async function POST(
     const documentUrl = uploadResult.url;
 
     // Update the location with the document URL
-    const updateSuccess = await updateLocationLicenseDocumentUrl(id, documentUrl);
+    const updateResult = await updateLocationLicenseDocumentUrl(id, documentUrl);
 
-    if (!updateSuccess) {
+    if (!updateResult.success) {
+      console.error('Failed to update location license document URL:', updateResult.error);
       return NextResponse.json(
-        { error: 'Document uploaded but failed to update location record' },
+        { error: updateResult.error || 'Document uploaded but failed to update location record' },
         { status: 500 }
       );
     }

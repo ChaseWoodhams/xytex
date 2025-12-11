@@ -1,5 +1,6 @@
 import { getAccounts } from "@/lib/supabase/accounts";
 import { getLocationsByAccount } from "@/lib/supabase/locations";
+import { getAgreementsByAccount } from "@/lib/supabase/agreements";
 import type { Account, Location } from "@/lib/supabase/types";
 import Link from "next/link";
 import { Building2, Plus, Search } from "lucide-react";
@@ -16,7 +17,7 @@ export default async function AccountsPage() {
     accounts = [];
   }
 
-  // Get location counts and city/state data for each account
+  // Get location counts, city/state data, and most recent contract date for each account
   const accountsWithLocationCounts = await Promise.all(
     accounts.map(async (account) => {
       let locations: Location[] = [];
@@ -28,6 +29,27 @@ export default async function AccountsPage() {
         locations = [];
       }
       const locationCount = locations.length;
+      
+      // Get agreements and find most recent signed date
+      let mostRecentContractDate: string | null = null;
+      try {
+        const agreements = await getAgreementsByAccount(account.id);
+        // Filter agreements with signed_date and find the most recent one
+        const signedAgreements = agreements
+          .filter(agreement => agreement.signed_date)
+          .sort((a, b) => {
+            const dateA = new Date(a.signed_date!).getTime();
+            const dateB = new Date(b.signed_date!).getTime();
+            return dateB - dateA; // Sort descending (most recent first)
+          });
+        
+        if (signedAgreements.length > 0) {
+          mostRecentContractDate = signedAgreements[0].signed_date!;
+        }
+      } catch (error) {
+        console.error(`Error fetching agreements for account ${account.id}:`, error);
+        // Continue with null if fetch fails
+      }
       
       // Determine if this is a multi-location account based on account_type or location count
       const isMultiLocation = account.account_type === 'multi_location' || locationCount > 1;
@@ -80,6 +102,7 @@ export default async function AccountsPage() {
         locationCountries: Array.from(countries),
         locationAddresses: addresses,
         locationZipCodes: zipCodes,
+        mostRecentContractDate,
       };
     })
   );

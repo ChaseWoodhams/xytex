@@ -3,7 +3,8 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import type { Account } from "@/lib/supabase/types";
-import { Search, Building2, Trash2 } from "lucide-react";
+import { Search, Building2, Trash2, Edit, X, MapPin, MapPinned } from "lucide-react";
+import AccountForm from "./AccountForm";
 
 interface AccountWithLocationCount extends Account {
   locationCount?: number;
@@ -12,6 +13,7 @@ interface AccountWithLocationCount extends Account {
   locationCountries?: string[];
   locationAddresses?: string[];
   locationZipCodes?: string[];
+  mostRecentContractDate?: string | null;
 }
 
 interface AccountsListProps {
@@ -89,11 +91,17 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
   const [countryFilter, setCountryFilter] = useState<CountryFilter>('ALL');
   const [accounts, setAccounts] = useState(initialAccounts);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
   // Sync accounts state when initialAccounts prop changes
   useEffect(() => {
     setAccounts(initialAccounts);
   }, [initialAccounts]);
+
+  const handleEditSuccess = () => {
+    // Refresh the page to get updated account data
+    window.location.reload();
+  };
 
   const filteredAccounts = useMemo(() => {
     return accounts.filter((account) => {
@@ -208,6 +216,9 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
                     Primary Contact
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
+                    Most Recent Contract
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
                     Actions
                   </th>
                 </tr>
@@ -245,11 +256,27 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
                           >
                             {account.name}
                           </Link>
-                          {account.locationCount !== undefined && account.locationCount > 1 && (
-                            <span className="px-2 py-1 text-xs font-semibold bg-navy-100 text-navy-700 rounded-full">
-                              {account.locationCount} locations
-                            </span>
-                          )}
+                          {(() => {
+                            const isMulti = account.account_type === 'multi_location' || (account.locationCount !== undefined && account.locationCount > 1);
+                            if (isMulti) {
+                              return (
+                                <span className="px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full flex items-center gap-1">
+                                  <MapPinned className="w-3 h-3" />
+                                  Multi-Location
+                                  {account.locationCount !== undefined && account.locationCount > 1 && (
+                                    <span className="ml-1">({account.locationCount})</span>
+                                  )}
+                                </span>
+                              );
+                            } else {
+                              return (
+                                <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  Single Location
+                                </span>
+                              );
+                            }
+                          })()}
                         </div>
                       </td>
                       <td className="py-3 px-4 text-sm text-navy-600">
@@ -270,6 +297,17 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
                       <td className="py-3 px-4 text-sm text-navy-600">
                         {account.primary_contact_name || account.primary_contact_email || "—"}
                       </td>
+                      <td className="py-3 px-4 text-sm text-navy-600">
+                        {account.mostRecentContractDate ? (
+                          new Date(account.mostRecentContractDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <Link
@@ -279,9 +317,16 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
                             View
                           </Link>
                           <button
+                            onClick={() => setEditingAccount(account)}
+                            className="p-1.5 text-navy-600 hover:text-gold-600 hover:bg-gold-50 rounded transition-colors"
+                            title="Quick edit account"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => handleDelete(account.id, account.name)}
                             disabled={deletingId === account.id}
-                            className="text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Delete account"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -293,6 +338,36 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Edit Modal */}
+      {editingAccount && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto my-8">
+            <div className="sticky top-0 bg-white border-b border-navy-200 px-6 py-4 flex items-center justify-between z-10">
+              <h2 className="text-2xl font-heading font-semibold text-navy-900">
+                Quick Edit Account
+              </h2>
+              <button
+                onClick={() => setEditingAccount(null)}
+                className="p-2 text-navy-600 hover:text-navy-900 hover:bg-navy-50 rounded-lg transition-colors"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <AccountForm
+                account={editingAccount}
+                onSuccess={() => {
+                  handleEditSuccess();
+                  setEditingAccount(null);
+                }}
+                onCancel={() => setEditingAccount(null)}
+              />
+            </div>
           </div>
         </div>
       )}

@@ -9,9 +9,10 @@ import { STATES_AND_PROVINCES, COUNTRY_CODES, INDUSTRIES } from "@/lib/utils/for
 interface AccountFormProps {
   account?: Account;
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-export default function AccountForm({ account, onSuccess }: AccountFormProps) {
+export default function AccountForm({ account, onSuccess, onCancel }: AccountFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -597,7 +598,13 @@ export default function AccountForm({ account, onSuccess }: AccountFormProps) {
         </button>
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => {
+            if (onCancel) {
+              onCancel();
+            } else {
+              router.back();
+            }
+          }}
           className="btn btn-secondary"
           disabled={loading}
         >
