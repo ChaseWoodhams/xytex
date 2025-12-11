@@ -51,14 +51,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', authUser.id)
         .single();
 
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Profile fetch timeout')), TIMEOUT_MS)
-      );
+      let timeoutId: NodeJS.Timeout | undefined;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error('Profile fetch timeout')), TIMEOUT_MS);
+      });
 
       try {
         type ProfileResult = Awaited<typeof profilePromise>;
         const result = await Promise.race([
-          profilePromise,
+          profilePromise.then((result) => {
+            if (timeoutId) clearTimeout(timeoutId);
+            return result;
+          }),
           timeoutPromise,
         ]) as ProfileResult;
 
@@ -85,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserProfile(null);
         }
       } catch (raceError) {
+        if (timeoutId) clearTimeout(timeoutId);
         // Handle timeout or other race errors
         if (raceError instanceof Error) {
           // Retry on timeout if we haven't exceeded max retries
