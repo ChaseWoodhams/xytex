@@ -51,9 +51,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', authUser.id)
         .single();
 
+      // Declare timeoutId outside try block so it's accessible in catch
+      let timeoutId: NodeJS.Timeout | undefined;
+
       try {
         // Create a timeout that will throw if the query takes too long
-        let timeoutId: NodeJS.Timeout;
         const timeoutError = new Error('Profile fetch timeout');
         
         const timeoutPromise = new Promise<never>((_, reject) => {
@@ -65,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const queryPromise = Promise.resolve(profileQuery) as Promise<{ data: User | null; error: { message: string; code?: string; details?: string; hint?: string } | null }>;
         const result = await Promise.race([
           queryPromise.then((r) => {
-            clearTimeout(timeoutId);
+            if (timeoutId) clearTimeout(timeoutId);
             return r;
           }),
           timeoutPromise,
