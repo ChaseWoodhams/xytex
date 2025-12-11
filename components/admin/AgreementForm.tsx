@@ -87,10 +87,11 @@ export default function AgreementForm({
         throw new Error(data.error || "Failed to save agreement");
       }
 
+      // Always refresh to ensure data is up to date
+      router.refresh();
+      
       if (onSuccess) {
         onSuccess();
-      } else {
-        router.refresh();
       }
     } catch (err: any) {
       setError(err.message || "An error occurred");

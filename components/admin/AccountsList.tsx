@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Account } from "@/lib/supabase/types";
 import { Search, Building2, Trash2, Edit, X, MapPin, MapPinned } from "lucide-react";
@@ -87,6 +88,7 @@ function accountMatchesCountryFilter(
 }
 
 export default function AccountsList({ initialAccounts }: AccountsListProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [countryFilter, setCountryFilter] = useState<CountryFilter>('ALL');
   const [accounts, setAccounts] = useState(initialAccounts);
@@ -99,8 +101,9 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
   }, [initialAccounts]);
 
   const handleEditSuccess = () => {
-    // Refresh the page to get updated account data
-    window.location.reload();
+    // Refresh the router to get updated account data
+    router.refresh();
+    setEditingAccount(null);
   };
 
   const filteredAccounts = useMemo(() => {
@@ -133,8 +136,9 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
         throw new Error(error.error || 'Failed to delete account');
       }
 
-      // Remove the account from the local state
+      // Remove the account from the local state and refresh
       setAccounts(accounts.filter(account => account.id !== accountId));
+      router.refresh();
     } catch (error: any) {
       console.error('Error deleting account:', error);
       alert(`Failed to delete account: ${error.message}`);

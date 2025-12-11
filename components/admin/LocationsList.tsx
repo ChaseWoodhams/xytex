@@ -182,7 +182,7 @@ export default function LocationsList({ accountId, locations, locationAgreements
             accountId={accountId}
             onSuccess={() => {
               setShowForm(false);
-              window.location.reload();
+              router.refresh();
             }}
             onCancel={() => setShowForm(false)}
           />
@@ -205,8 +205,8 @@ export default function LocationsList({ accountId, locations, locationAgreements
                 throw new Error(error.error || 'Failed to delete location');
               }
 
-              // Reload the page to update the locations list
-              window.location.reload();
+              // Refresh the router to update the locations list
+              router.refresh();
             } catch (error: any) {
               console.error('Error deleting location:', error);
               alert(`Failed to delete location: ${error.message}`);

@@ -136,11 +136,13 @@ export default function AccountForm({ account, onSuccess, onCancel }: AccountFor
       
       // If onSuccess callback is provided, call it (for inline editing)
       // Otherwise, navigate to the account detail page (for new accounts)
+      // Always refresh to ensure data is up to date
+      router.refresh();
+      
       if (onSuccess) {
         onSuccess();
       } else {
         router.push(`/admin/accounts/${data.id}`);
-        router.refresh();
       }
     } catch (err: any) {
       setError(err.message || "An error occurred");

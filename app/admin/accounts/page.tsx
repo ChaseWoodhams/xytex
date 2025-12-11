@@ -3,9 +3,10 @@ import { getLocationsByAccount } from "@/lib/supabase/locations";
 import { getAgreementsByAccount } from "@/lib/supabase/agreements";
 import type { Account, Location } from "@/lib/supabase/types";
 import Link from "next/link";
-import { Building2, Plus, Search } from "lucide-react";
+import { Building2, Plus, Search, RefreshCw } from "lucide-react";
 import AccountsList from "@/components/admin/AccountsList";
 import InviteTeamMember from "@/components/admin/InviteTeamMember";
+import RefreshButton from "@/components/admin/RefreshButton";
 
 export default async function AccountsPage() {
   let accounts: Account[] = [];
@@ -119,6 +120,7 @@ export default async function AccountsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <RefreshButton />
           <InviteTeamMember />
           <Link href="/admin/accounts/new" className="btn btn-primary">
             <Plus className="w-5 h-5" />
