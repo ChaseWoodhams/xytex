@@ -447,9 +447,9 @@ export default function AccountMergeTool() {
                     <div className="bg-cream-50 rounded-lg p-4 space-y-2">
                       <div>
                         <span className="font-medium text-navy-700">Name:</span>{" "}
-                        <span className="text-navy-900">{accountDetails.account.name}</span>
+                        <span className="text-navy-900">{accountDetails?.account?.name || 'N/A'}</span>
                       </div>
-                      {accountDetails.account.website && (
+                      {accountDetails?.account?.website && (
                         <div>
                           <span className="font-medium text-navy-700">Website:</span>{" "}
                           <a
