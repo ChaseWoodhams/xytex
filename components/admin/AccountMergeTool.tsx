@@ -5,9 +5,14 @@ import { Search, Merge, Loader2, Building2, MapPin, AlertTriangle, CheckCircle2,
 import type { Account, Location, Agreement, Activity, Note } from "@/lib/supabase/types";
 
 interface AccountWithLocation extends Account {
-  locationAddress?: string;
-  locationCity?: string;
-  locationState?: string;
+  locations?: Array<{
+    name: string | null;
+    address_line1: string | null;
+    address_line2: string | null;
+    city: string | null;
+    state: string | null;
+    zip_code: string | null;
+  }>;
 }
 
 interface SimilarityGroup {
@@ -340,6 +345,10 @@ export default function AccountMergeTool() {
                     <div className="bg-white">
                       {group.accounts.map((account) => {
                         const isSelected = groupSelected.has(account.id);
+                        // Debug: log account data to help diagnose
+                        if (process.env.NODE_ENV === 'development') {
+                          console.log('Account data:', account.id, account.name, 'Locations:', account.locations);
+                        }
                         return (
                           <div
                             key={account.id}
@@ -365,6 +374,11 @@ export default function AccountMergeTool() {
                                       ? "Single"
                                       : "Multi"}
                                   </span>
+                                  {account.sage_code && (
+                                    <span className="px-2 py-0.5 text-xs font-mono font-semibold bg-gold-100 text-gold-800 rounded-full">
+                                      SAGE: {account.sage_code}
+                                    </span>
+                                  )}
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -377,17 +391,46 @@ export default function AccountMergeTool() {
                                     View Details
                                   </button>
                                 </div>
-                                {account.locationAddress && (
-                                  <div className="flex items-center gap-2 text-sm text-navy-600">
-                                    <MapPin className="w-3 h-3 text-navy-400 flex-shrink-0" />
-                                    <span>
-                                      {account.locationAddress}
-                                      {account.locationCity &&
-                                        `, ${account.locationCity}`}
-                                      {account.locationState &&
-                                        `, ${account.locationState}`}
-                                    </span>
+                                {account.locations && account.locations.length > 0 ? (
+                                  <div className="mt-2 space-y-2">
+                                    {account.locations.map((location, locIndex) => {
+                                      const addressParts = [
+                                        location.address_line1,
+                                        location.address_line2,
+                                        location.city,
+                                        location.state,
+                                        location.zip_code,
+                                      ].filter(Boolean);
+                                      
+                                      const hasAddress = addressParts.length > 0;
+                                      const locationName = location.name;
+                                      
+                                      if (!hasAddress && !locationName) return null;
+                                      
+                                      return (
+                                        <div key={locIndex} className="flex items-start gap-2 text-sm text-navy-600">
+                                          <MapPin className="w-3 h-3 text-navy-400 flex-shrink-0 mt-0.5" />
+                                          <div className="flex-1">
+                                            {locationName && (
+                                              <div className="font-medium text-navy-700 mb-0.5">
+                                                {locationName}
+                                              </div>
+                                            )}
+                                            {hasAddress && (
+                                              <div>{addressParts.join(', ')}</div>
+                                            )}
+                                            {!hasAddress && locationName && (
+                                              <div className="text-navy-500 italic">No address on file</div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
+                                ) : account.locations === undefined ? (
+                                  <div className="mt-1 text-xs text-navy-500 italic">Loading locations...</div>
+                                ) : (
+                                  <div className="mt-1 text-xs text-navy-500 italic">No locations found</div>
                                 )}
                                 {account.primary_contact_email && (
                                   <p className="text-xs text-navy-500 mt-1">

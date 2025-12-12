@@ -114,10 +114,10 @@ export async function GET() {
     // Use admin client for queries to bypass RLS
     const adminClient = createAdminClient();
 
-    // Get all single-location accounts
+    // Get all single-location accounts (include address fields from account for fallback)
     const { data: accounts, error: accountsError } = await adminClient
       .from('accounts')
-      .select('id, name, account_type, primary_contact_email, primary_contact_name')
+      .select('id, name, account_type, primary_contact_email, primary_contact_name, sage_code, udf_address_line1, udf_address_line2, udf_city, udf_state, udf_zipcode, udf_clinic_name')
       .eq('account_type', 'single_location')
       .eq('status', 'active')
       .order('name');
@@ -141,6 +141,13 @@ export async function GET() {
       account_type: string;
       primary_contact_email: string | null;
       primary_contact_name: string | null;
+      sage_code: string | null;
+      udf_address_line1: string | null;
+      udf_address_line2: string | null;
+      udf_city: string | null;
+      udf_state: string | null;
+      udf_zipcode: string | null;
+      udf_clinic_name: string | null;
     };
     const accountsData = accounts as AccountRow[];
 
@@ -151,56 +158,96 @@ export async function GET() {
     if (accountIds.length > 0) {
       // Supabase .in() has a limit, so we'll fetch in batches if needed
       const batchSize = 100;
-      const locationPromises: Promise<any>[] = [];
+      const locationPromises: Promise<any[]>[] = [];
       
       for (let i = 0; i < accountIds.length; i += batchSize) {
         const batch = accountIds.slice(i, i + batchSize);
         locationPromises.push(
-          Promise.resolve(
-            adminClient
+          (async () => {
+            const { data, error } = await adminClient
               .from('locations')
-              .select('id, account_id, address_line1, city, state, zip_code')
-              .in('account_id', batch)
-          ).then(({ data, error }) => {
+              .select('id, account_id, name, address_line1, address_line2, city, state, zip_code')
+              .in('account_id', batch);
+            
             if (error) {
               console.error(`Error fetching locations batch ${i / batchSize + 1}:`, error);
               throw error;
             }
             return data || [];
-          })
+          })()
         );
       }
       
       try {
         const locationBatches = await Promise.all(locationPromises);
         locations = locationBatches.flat();
+        console.log(`Fetched ${locations.length} total locations for ${accountIds.length} accounts`);
       } catch (locationsError: any) {
         console.error('Error fetching locations:', locationsError);
-        return NextResponse.json(
-          { error: `Failed to fetch locations: ${locationsError.message || locationsError.details || 'Unknown error'}` },
-          { status: 400 }
-        );
+        // Don't fail the entire request if locations fail - just log and continue with empty locations
+        locations = [];
       }
     }
 
-    // Create a map of account_id to location
-    const locationMap = new Map<string, (typeof locations)[0]>();
+    // Create a map of account_id to locations (all locations for each account)
+    const locationMap = new Map<string, (typeof locations)[0][]>();
     locations.forEach(loc => {
       if (!locationMap.has(loc.account_id)) {
-        locationMap.set(loc.account_id, loc);
+        locationMap.set(loc.account_id, []);
       }
+      locationMap.get(loc.account_id)!.push(loc);
     });
 
-    // Enrich accounts with location data
+    // Log which accounts have locations and which don't
+    const accountsWithoutLocations: string[] = [];
+    const accountsWithLocationsList: Array<{ id: string; name: string; count: number }> = [];
+
+    // Enrich accounts with location data (all locations, or fallback to account udf fields)
     const accountsWithLocations = accountsData.map(acc => {
-      const location = locationMap.get(acc.id);
-      return {
+      const accountLocations = locationMap.get(acc.id) || [];
+      
+      // If no locations found in locations table, use account's udf address fields as fallback
+      let locations = accountLocations.map(loc => ({
+        name: loc.name || null,
+        address_line1: loc.address_line1 || null,
+        address_line2: loc.address_line2 || null,
+        city: loc.city || null,
+        state: loc.state || null,
+        zip_code: loc.zip_code || null,
+      }));
+      
+      // Fallback: if no locations in locations table, create one from account's udf fields
+      if (locations.length === 0) {
+        const hasAddressData = acc.udf_address_line1 || acc.udf_city || acc.udf_state || acc.udf_zipcode;
+        if (hasAddressData) {
+          locations = [{
+            name: acc.udf_clinic_name || acc.name || null,
+            address_line1: acc.udf_address_line1 || null,
+            address_line2: acc.udf_address_line2 || null,
+            city: acc.udf_city || null,
+            state: acc.udf_state || null,
+            zip_code: acc.udf_zipcode || null,
+          }];
+          accountsWithLocationsList.push({ id: acc.id, name: acc.name, count: 1 });
+        } else {
+          accountsWithoutLocations.push(`${acc.name} (${acc.id})`);
+        }
+      } else {
+        accountsWithLocationsList.push({ id: acc.id, name: acc.name, count: accountLocations.length });
+      }
+      
+      const enrichedAccount = {
         ...acc,
-        locationAddress: location?.address_line1 || null,
-        locationCity: location?.city || null,
-        locationState: location?.state || null,
+        locations,
       };
+      return enrichedAccount;
     });
+
+    // Log summary
+    console.log(`Location fetch summary: ${accountsWithLocationsList.length} accounts with locations, ${accountsWithoutLocations.length} accounts without locations`);
+    if (accountsWithoutLocations.length > 0 && accountsWithoutLocations.length <= 10) {
+      console.log('Accounts without locations:', accountsWithoutLocations);
+    }
 
     // Group similar accounts
     const SIMILARITY_THRESHOLD = 0.7; // 70% similarity
