@@ -114,8 +114,8 @@ export async function POST(request: Request) {
         is_primary: true,
         status: 'active',
       };
-      const { error: createLocationError } = await adminClient
-        .from('locations')
+      const { error: createLocationError } = await (adminClient
+        .from('locations') as any)
         .insert(locationData);
 
       if (createLocationError) {
@@ -144,8 +144,8 @@ export async function POST(request: Request) {
     if (locationsToReassign.length > 0) {
       const locationIds = locationsToReassign.map(loc => loc.id);
       const updateData: any = { account_id: primaryAccount.id };
-      const { error: updateLocationsError } = await adminClient
-        .from('locations')
+      const { error: updateLocationsError } = await (adminClient
+        .from('locations') as any)
         .update(updateData)
         .in('id', locationIds);
 
@@ -164,8 +164,8 @@ export async function POST(request: Request) {
 
     if (agreementsToReassign && agreementsToReassign.length > 0) {
       const agreementUpdateData: any = { account_id: primaryAccount.id };
-      const { error: updateAgreementsError } = await adminClient
-        .from('agreements')
+      const { error: updateAgreementsError } = await (adminClient
+        .from('agreements') as any)
         .update(agreementUpdateData)
         .in('account_id', accountsToDeleteIds);
 
@@ -183,8 +183,8 @@ export async function POST(request: Request) {
 
     if (activitiesToReassign && activitiesToReassign.length > 0) {
       const activityUpdateData: any = { account_id: primaryAccount.id };
-      const { error: updateActivitiesError } = await adminClient
-        .from('activities')
+      const { error: updateActivitiesError } = await (adminClient
+        .from('activities') as any)
         .update(activityUpdateData)
         .in('account_id', accountsToDeleteIds);
 
@@ -202,8 +202,8 @@ export async function POST(request: Request) {
 
     if (notesToReassign && notesToReassign.length > 0) {
       const noteUpdateData: any = { account_id: primaryAccount.id };
-      const { error: updateNotesError } = await adminClient
-        .from('notes')
+      const { error: updateNotesError } = await (adminClient
+        .from('notes') as any)
         .update(noteUpdateData)
         .in('account_id', accountsToDeleteIds);
 
@@ -220,8 +220,8 @@ export async function POST(request: Request) {
       account_type: 'multi_location',
       updated_at: new Date().toISOString(),
     };
-    const { error: updateAccountError } = await adminClient
-      .from('accounts')
+    const { error: updateAccountError } = await (adminClient
+      .from('accounts') as any)
       .update(accountUpdateData)
       .eq('id', primaryAccount.id);
 
