@@ -57,9 +57,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // Type assertion for accounts - Supabase returns generic objects
+    type AccountRow = {
+      id: string;
+      name: string;
+      account_type: string;
+      [key: string]: any; // Allow other properties
+    };
+    const accountsData = accounts as AccountRow[];
+
     // Use the first account as the primary account (keep this one, merge others into it)
-    const primaryAccount = accounts[0];
-    const accountsToDeleteIds = accounts.slice(1).map(acc => acc.id);
+    const primaryAccount = accountsData[0];
+    const accountsToDeleteIds = accountsData.slice(1).map(acc => acc.id);
 
     // Get ALL locations for ALL accounts being merged (including primary account)
     const { data: allLocations, error: locationsError } = await adminClient
@@ -73,27 +82,28 @@ export async function POST(request: Request) {
 
     // For single-location accounts, check if location data is in UDF fields
     // and create locations from UDF fields if they don't exist in locations table
-    const accountsNeedingLocations = accounts.filter(acc => {
-      const hasLocationInTable = allLocations?.some(loc => loc.account_id === acc.id);
-      const hasUdfLocationData = acc.udf_address_line1 || acc.udf_city || acc.udf_state;
+    const accountsNeedingLocations = accountsData.filter(acc => {
+      const hasLocationInTable = allLocations?.some((loc: any) => loc.account_id === acc.id);
+      const hasUdfLocationData = (acc as any).udf_address_line1 || (acc as any).udf_city || (acc as any).udf_state;
       return !hasLocationInTable && hasUdfLocationData;
     });
 
     // Create locations from UDF fields for accounts that need them
     for (const account of accountsNeedingLocations) {
+      const accountWithUdf = account as any;
       const { error: createLocationError } = await adminClient
         .from('locations')
         .insert({
           account_id: account.id, // Temporarily assign to original account
           name: account.name,
-          address_line1: account.udf_address_line1 || null,
-          address_line2: account.udf_address_line2 || null,
-          city: account.udf_city || null,
-          state: account.udf_state || null,
-          zip_code: account.udf_zipcode || null,
-          phone: account.udf_phone || null,
-          email: account.primary_contact_email || null,
-          contact_name: account.primary_contact_name || null,
+          address_line1: accountWithUdf.udf_address_line1 || null,
+          address_line2: accountWithUdf.udf_address_line2 || null,
+          city: accountWithUdf.udf_city || null,
+          state: accountWithUdf.udf_state || null,
+          zip_code: accountWithUdf.udf_zipcode || null,
+          phone: accountWithUdf.udf_phone || null,
+          email: accountWithUdf.primary_contact_email || null,
+          contact_name: accountWithUdf.primary_contact_name || null,
           is_primary: true,
           status: 'active',
         });
