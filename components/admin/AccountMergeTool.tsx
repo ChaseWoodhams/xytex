@@ -453,7 +453,7 @@ export default function AccountMergeTool() {
                         <div>
                           <span className="font-medium text-navy-700">Website:</span>{" "}
                           <a
-                            href={accountDetails.account.website}
+                            href={accountDetails.account.website || undefined}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:underline"
