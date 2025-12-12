@@ -134,8 +134,18 @@ export async function GET() {
       return NextResponse.json({ groups: [] });
     }
 
+    // Type assertion for accounts
+    type AccountRow = {
+      id: string;
+      name: string;
+      account_type: string;
+      primary_contact_email: string | null;
+      primary_contact_name: string | null;
+    };
+    const accountsData = accounts as AccountRow[];
+
     // Get locations for these accounts
-    const accountIds = accounts.map(acc => acc.id);
+    const accountIds = accountsData.map(acc => acc.id);
     
     let locations: any[] = [];
     if (accountIds.length > 0) {
@@ -181,7 +191,7 @@ export async function GET() {
     });
 
     // Enrich accounts with location data
-    const accountsWithLocations = accounts.map(acc => {
+    const accountsWithLocations = accountsData.map(acc => {
       const location = locationMap.get(acc.id);
       return {
         ...acc,
