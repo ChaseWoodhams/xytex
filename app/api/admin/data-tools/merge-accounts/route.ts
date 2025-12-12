@@ -143,9 +143,10 @@ export async function POST(request: Request) {
     // Reassign all locations from merged accounts to primary account
     if (locationsToReassign.length > 0) {
       const locationIds = locationsToReassign.map(loc => loc.id);
+      const updateData: any = { account_id: primaryAccount.id };
       const { error: updateLocationsError } = await adminClient
         .from('locations')
-        .update({ account_id: primaryAccount.id })
+        .update(updateData)
         .in('id', locationIds);
 
       if (updateLocationsError) {
@@ -162,9 +163,10 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (agreementsToReassign && agreementsToReassign.length > 0) {
+      const agreementUpdateData: any = { account_id: primaryAccount.id };
       const { error: updateAgreementsError } = await adminClient
         .from('agreements')
-        .update({ account_id: primaryAccount.id })
+        .update(agreementUpdateData)
         .in('account_id', accountsToDeleteIds);
 
       if (updateAgreementsError) {
@@ -180,9 +182,10 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (activitiesToReassign && activitiesToReassign.length > 0) {
+      const activityUpdateData: any = { account_id: primaryAccount.id };
       const { error: updateActivitiesError } = await adminClient
         .from('activities')
-        .update({ account_id: primaryAccount.id })
+        .update(activityUpdateData)
         .in('account_id', accountsToDeleteIds);
 
       if (updateActivitiesError) {
@@ -198,9 +201,10 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (notesToReassign && notesToReassign.length > 0) {
+      const noteUpdateData: any = { account_id: primaryAccount.id };
       const { error: updateNotesError } = await adminClient
         .from('notes')
-        .update({ account_id: primaryAccount.id })
+        .update(noteUpdateData)
         .in('account_id', accountsToDeleteIds);
 
       if (updateNotesError) {
@@ -212,12 +216,13 @@ export async function POST(request: Request) {
     // which stays the same. The locations are just reassigned to a different account_id.
 
     // Update primary account to multi-location
+    const accountUpdateData: any = {
+      account_type: 'multi_location',
+      updated_at: new Date().toISOString(),
+    };
     const { error: updateAccountError } = await adminClient
       .from('accounts')
-      .update({
-        account_type: 'multi_location',
-        updated_at: new Date().toISOString(),
-      })
+      .update(accountUpdateData)
       .eq('id', primaryAccount.id);
 
     if (updateAccountError) {
