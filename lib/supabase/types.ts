@@ -109,7 +109,25 @@ export interface Account {
   udf_phone: string | null;
   udf_email: string | null;
   udf_country_code: string | null;
+  upload_batch_id: string | null;
+  upload_list_name: string | null;
   created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AccountUploadStatus = 'completed' | 'reverted';
+
+export interface AccountUpload {
+  id: string;
+  name: string;
+  file_name: string;
+  uploaded_by: string;
+  account_count: number;
+  column_mapping: Record<string, string>;
+  status: AccountUploadStatus;
+  reverted_at: string | null;
+  reverted_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -135,6 +153,25 @@ export interface Location {
   sage_code: string | null;
   agreement_document_url: string | null;
   license_document_url: string | null;
+  upload_batch_id: string | null;
+  upload_list_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type LocationUploadStatus = 'completed' | 'reverted';
+
+export interface LocationUpload {
+  id: string;
+  name: string;
+  file_name: string;
+  account_id: string;
+  uploaded_by: string;
+  location_count: number;
+  column_mapping: Record<string, string>;
+  status: LocationUploadStatus;
+  reverted_at: string | null;
+  reverted_by: string | null;
   created_at: string;
   updated_at: string;
 }

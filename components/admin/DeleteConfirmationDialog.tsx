@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { ReactNode } from "react";
 import { AlertTriangle, X } from "lucide-react";
 
 interface DeleteConfirmationDialogProps {
@@ -8,9 +8,10 @@ interface DeleteConfirmationDialogProps {
   onClose: () => void;
   onConfirm: () => void;
   title: string;
-  message: string;
+  message: string | ReactNode;
   itemName: string;
   isLoading?: boolean;
+  confirmText?: string;
 }
 
 export default function DeleteConfirmationDialog({
@@ -21,6 +22,7 @@ export default function DeleteConfirmationDialog({
   message,
   itemName,
   isLoading = false,
+  confirmText = "Delete",
 }: DeleteConfirmationDialogProps) {
   if (!isOpen) return null;
 
@@ -47,9 +49,13 @@ export default function DeleteConfirmationDialog({
           </div>
 
           <div className="mb-6">
-            <p className="text-navy-700 mb-3 whitespace-pre-line">{message}</p>
+            {typeof message === "string" ? (
+              <p className="text-navy-700 mb-3 whitespace-pre-line">{message}</p>
+            ) : (
+              <div className="text-navy-700 mb-3">{message}</div>
+            )}
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
-              <p className="text-xs text-red-600 uppercase tracking-wide mb-1">Account to Delete:</p>
+              <p className="text-xs text-red-600 uppercase tracking-wide mb-1">Item to {confirmText.toLowerCase()}:</p>
               <p className="text-sm font-medium text-navy-900">{itemName}</p>
             </div>
             <div className="bg-red-100 border border-red-300 rounded-lg p-3">
@@ -76,10 +82,10 @@ export default function DeleteConfirmationDialog({
               {isLoading ? (
                 <>
                   <span className="animate-spin">⏳</span>
-                  Deleting...
+                  Processing...
                 </>
               ) : (
-                "Delete"
+                confirmText
               )}
             </button>
           </div>

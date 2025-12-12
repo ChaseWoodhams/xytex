@@ -1,10 +1,35 @@
 import { createAdminClient } from './admin';
 import type { Account, AccountStatus } from './types';
 
+export type CountryFilter = 'US' | 'CA' | 'UK' | 'INTL';
+
 export interface AccountFilters {
   status?: AccountStatus;
   industry?: string;
   search?: string;
+  country?: CountryFilter; // Filter by country
+  hasContracts?: boolean; // true = has contracts, false = no contracts, undefined = all
+  hasLicenses?: boolean; // true = has licenses, false = no licenses, undefined = all
+}
+
+export interface PaginatedAccountsResult {
+  accounts: Account[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface AccountWithMetadata extends Account {
+  locationCount: number;
+  hasContracts: boolean;
+  hasLicenses: boolean;
+  mostRecentContractDate: string | null;
+  locationCities: string[];
+  locationStates: string[];
+  locationCountries: string[];
+  locationAddresses: string[];
+  locationZipCodes: string[];
 }
 
 export async function getAccounts(
@@ -45,6 +70,249 @@ export async function getAccounts(
   const accounts = data || [];
   console.log(`[getAccounts] Found ${accounts.length} accounts`);
   return accounts;
+}
+
+/**
+ * Optimized function to get paginated accounts with metadata (location counts, contracts, licenses)
+ * Uses efficient JOINs to avoid N+1 queries
+ */
+export async function getPaginatedAccountsWithMetadata(
+  page: number = 1,
+  pageSize: number = 50,
+  filters?: AccountFilters
+): Promise<PaginatedAccountsResult & { accounts: AccountWithMetadata[] }> {
+  const supabase = createAdminClient();
+  const offset = (page - 1) * pageSize;
+
+  // Build base query with filters (but don't paginate yet - we need to filter by contracts/licenses first)
+  let baseQuery = supabase.from('accounts').select('*');
+
+  if (filters?.status) {
+    baseQuery = baseQuery.eq('status', filters.status);
+  }
+
+  if (filters?.industry) {
+    baseQuery = baseQuery.eq('industry', filters.industry);
+  }
+
+  if (filters?.search) {
+    baseQuery = baseQuery.or(`name.ilike.%${filters.search}%,primary_contact_name.ilike.%${filters.search}%,primary_contact_email.ilike.%${filters.search}%`);
+  }
+
+  // Order by created_at (descending) - we'll paginate after filtering
+  baseQuery = baseQuery.order('created_at', { ascending: false });
+
+  // Fetch ALL accounts matching base filters first (we'll filter by contracts/licenses, then paginate)
+  const { data: allAccounts, error: accountsError } = await baseQuery;
+
+  if (accountsError) {
+    console.error('Error fetching accounts:', accountsError);
+    throw accountsError;
+  }
+
+  if (!allAccounts || allAccounts.length === 0) {
+    return {
+      accounts: [],
+      total: 0,
+      page,
+      pageSize,
+      totalPages: 0,
+    };
+  }
+
+  const accountIds = allAccounts.map(acc => acc.id);
+
+  // Get all locations for these accounts in one query
+  const { data: locations, error: locationsError } = await supabase
+    .from('locations')
+    .select('id, account_id, city, state, country, address_line1, zip_code, license_document_url')
+    .in('account_id', accountIds);
+
+  if (locationsError) {
+    console.error('Error fetching locations:', locationsError);
+    // Continue with empty locations array
+  }
+
+  // Get all agreements for locations in these accounts
+  const locationIds = locations?.map(loc => loc.id) || [];
+  let agreements: any[] = [];
+  
+  if (locationIds.length > 0) {
+    const { data: agreementsData, error: agreementsError } = await supabase
+      .from('agreements')
+      .select('id, location_id, signed_date, status')
+      .in('location_id', locationIds)
+      .order('signed_date', { ascending: false });
+
+    if (agreementsError) {
+      console.error('Error fetching agreements:', agreementsError);
+    } else {
+      agreements = agreementsData || [];
+    }
+  }
+
+  // Group locations by account_id
+  const locationsByAccount = new Map<string, typeof locations>();
+  locations?.forEach(loc => {
+    if (!locationsByAccount.has(loc.account_id)) {
+      locationsByAccount.set(loc.account_id, []);
+    }
+    locationsByAccount.get(loc.account_id)!.push(loc);
+  });
+
+  // Group agreements by location_id, then by account_id
+  const agreementsByLocation = new Map<string, typeof agreements>();
+  agreements.forEach(agreement => {
+    if (!agreementsByLocation.has(agreement.location_id)) {
+      agreementsByLocation.set(agreement.location_id, []);
+    }
+    agreementsByLocation.get(agreement.location_id)!.push(agreement);
+  });
+
+  const agreementsByAccount = new Map<string, typeof agreements>();
+  locations?.forEach(loc => {
+    const locAgreements = agreementsByLocation.get(loc.id) || [];
+    if (!agreementsByAccount.has(loc.account_id)) {
+      agreementsByAccount.set(loc.account_id, []);
+    }
+    agreementsByAccount.get(loc.account_id)!.push(...locAgreements);
+  });
+
+  // Build enriched accounts with metadata for ALL accounts
+  const enrichedAccounts: AccountWithMetadata[] = allAccounts.map(account => {
+    const accountLocations = locationsByAccount.get(account.id) || [];
+    const accountAgreements = agreementsByAccount.get(account.id) || [];
+    
+    // Check for contracts
+    const hasContracts = accountAgreements.length > 0;
+    
+    // Check for licenses (any location has license_document_url)
+    const hasLicenses = accountLocations.some(loc => loc.license_document_url != null && loc.license_document_url.trim() !== '');
+    
+    // Get most recent contract date
+    const signedAgreements = accountAgreements
+      .filter(ag => ag.signed_date)
+      .sort((a, b) => {
+        const dateA = new Date(a.signed_date).getTime();
+        const dateB = new Date(b.signed_date).getTime();
+        return dateB - dateA;
+      });
+    const mostRecentContractDate = signedAgreements.length > 0 ? signedAgreements[0].signed_date : null;
+
+    // Collect unique cities, states, countries, addresses, zip codes
+    const citySet = new Set<string>();
+    const stateSet = new Set<string>();
+    const countrySet = new Set<string>();
+    const addressSet = new Set<string>();
+    const zipSet = new Set<string>();
+
+    accountLocations.forEach(loc => {
+      if (loc.city) citySet.add(loc.city);
+      if (loc.state) stateSet.add(loc.state);
+      if (loc.country) countrySet.add(loc.country);
+      if (loc.address_line1) addressSet.add(loc.address_line1);
+      if (loc.zip_code) zipSet.add(loc.zip_code);
+    });
+
+    // Also check account-level country code
+    if (account.udf_country_code) {
+      countrySet.add(account.udf_country_code);
+    }
+
+    return {
+      ...account,
+      locationCount: accountLocations.length,
+      hasContracts,
+      hasLicenses,
+      mostRecentContractDate,
+      locationCities: Array.from(citySet),
+      locationStates: Array.from(stateSet),
+      locationCountries: Array.from(countrySet),
+      locationAddresses: Array.from(addressSet),
+      locationZipCodes: Array.from(zipSet),
+    };
+  });
+
+  // Helper function to normalize country codes for filtering (matches client-side logic)
+  const normalizeCountry = (country: string | null | undefined): CountryFilter | null => {
+    if (!country || typeof country !== 'string' || !country.trim()) return null;
+    const upperCountry = country.trim().toUpperCase();
+    
+    if (upperCountry === 'USA' || upperCountry === 'US' || upperCountry === 'UNITED STATES') {
+      return 'US';
+    }
+    if (upperCountry === 'CA' || upperCountry === 'CAN' || upperCountry === 'CANADA') {
+      return 'CA';
+    }
+    if (upperCountry === 'UK' || upperCountry === 'GB' || upperCountry === 'GBR' || 
+        upperCountry === 'UNITED KINGDOM' || upperCountry === 'ENGLAND' || 
+        upperCountry === 'SCOTLAND' || upperCountry === 'WALES' || 
+        upperCountry === 'NORTHERN IRELAND') {
+      return 'UK';
+    }
+    return 'INTL';
+  };
+
+  // Helper function to check if account matches country filter
+  const accountMatchesCountryFilter = (account: AccountWithMetadata, filter: CountryFilter): boolean => {
+    const isSingleLocation = !account.account_type || 
+      account.account_type === 'single_location' || 
+      account.locationCount <= 1;
+    
+    // If account has a country code, use it first (most reliable)
+    if (account.udf_country_code && account.udf_country_code.trim()) {
+      const normalizedAccountCountry = normalizeCountry(account.udf_country_code.trim());
+      if (normalizedAccountCountry === filter) {
+        return true;
+      }
+      // For single-location accounts, only use account country code
+      if (isSingleLocation) {
+        return false;
+      }
+    }
+    
+    // For multi-location accounts or when account country doesn't match, check location countries
+    if (account.locationCountries && account.locationCountries.length > 0) {
+      const normalizedLocationCountries = account.locationCountries
+        .map(country => country ? normalizeCountry(country.trim()) : null)
+        .filter((country): country is CountryFilter => country !== null);
+      
+      return normalizedLocationCountries.some(country => country === filter);
+    }
+    
+    return false;
+  };
+
+  // Apply all filters (country, contracts, licenses) on ALL accounts, not just the page
+  let filteredAccounts = enrichedAccounts;
+  
+  // Apply country filter first
+  if (filters?.country) {
+    filteredAccounts = filteredAccounts.filter(acc => accountMatchesCountryFilter(acc, filters.country!));
+  }
+  
+  // Apply contract filter
+  if (filters?.hasContracts !== undefined) {
+    filteredAccounts = filteredAccounts.filter(acc => acc.hasContracts === filters.hasContracts);
+  }
+  
+  // Apply license filter
+  if (filters?.hasLicenses !== undefined) {
+    filteredAccounts = filteredAccounts.filter(acc => acc.hasLicenses === filters.hasLicenses);
+  }
+
+  // Now paginate the filtered results
+  const finalTotal = filteredAccounts.length;
+  const finalTotalPages = Math.ceil(finalTotal / pageSize);
+  const paginatedAccounts = filteredAccounts.slice(offset, offset + pageSize);
+
+  return {
+    accounts: paginatedAccounts,
+    total: finalTotal,
+    page,
+    pageSize,
+    totalPages: finalTotalPages,
+  };
 }
 
 export async function getAccountById(id: string): Promise<Account | null> {
@@ -134,6 +402,8 @@ export async function createAccount(
           sage_code: null, // Location sage code is separate from account sage code
           agreement_document_url: null,
           license_document_url: null,
+          upload_batch_id: null,
+          upload_list_name: null,
         };
 
         const location = await createLocation(locationData);
@@ -244,6 +514,8 @@ export async function updateAccount(
           sage_code: null,
           agreement_document_url: null,
           license_document_url: null,
+          upload_batch_id: null,
+          upload_list_name: null,
         };
         const location = await createLocation(locationData);
         if (location) {

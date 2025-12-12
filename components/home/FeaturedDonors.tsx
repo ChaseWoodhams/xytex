@@ -71,8 +71,10 @@ const mockFeaturedDonors = [
 export default function FeaturedDonors() {
   const [featuredDonors, setFeaturedDonors] = useState<Donor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     async function fetchFeatured() {
       try {
         const response = await fetch('/api/donors?featured=true&limit=4');
@@ -120,7 +122,7 @@ export default function FeaturedDonors() {
         </motion.div>
 
         {/* Donor Cards Grid - 4 cards, cleaner layout */}
-        {loading ? (
+        {!mounted || loading ? (
           <div className="text-center py-12">
             <Loader2 className="w-8 h-8 text-gold-500 animate-spin mx-auto mb-4" />
             <p className="text-navy-600">Loading featured donors...</p>
