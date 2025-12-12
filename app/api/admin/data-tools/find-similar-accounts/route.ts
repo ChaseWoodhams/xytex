@@ -156,17 +156,18 @@ export async function GET() {
       for (let i = 0; i < accountIds.length; i += batchSize) {
         const batch = accountIds.slice(i, i + batchSize);
         locationPromises.push(
-          adminClient
-            .from('locations')
-            .select('id, account_id, address_line1, city, state, zip_code')
-            .in('account_id', batch)
-            .then(({ data, error }) => {
-              if (error) {
-                console.error(`Error fetching locations batch ${i / batchSize + 1}:`, error);
-                throw error;
-              }
-              return data || [];
-            })
+          Promise.resolve(
+            adminClient
+              .from('locations')
+              .select('id, account_id, address_line1, city, state, zip_code')
+              .in('account_id', batch)
+          ).then(({ data, error }) => {
+            if (error) {
+              console.error(`Error fetching locations batch ${i / batchSize + 1}:`, error);
+              throw error;
+            }
+            return data || [];
+          })
         );
       }
       
