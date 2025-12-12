@@ -57,12 +57,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Type assertion for accounts - Supabase returns generic objects
+    // Type assertions for accounts and locations - Supabase returns generic objects
     type AccountRow = {
       id: string;
       name: string;
       account_type: string;
       [key: string]: any; // Allow other properties
+    };
+    type LocationRow = {
+      id: string;
+      account_id: string;
+      name: string;
+      [key: string]: any;
     };
     const accountsData = accounts as AccountRow[];
 
@@ -81,12 +87,6 @@ export async function POST(request: Request) {
     }
 
     // Type assertion for locations
-    type LocationRow = {
-      id: string;
-      account_id: string;
-      name: string;
-      [key: string]: any;
-    };
     const allLocationsData = (allLocations || []) as LocationRow[];
 
     // For single-location accounts, check if location data is in UDF fields
