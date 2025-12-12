@@ -453,37 +453,37 @@ export default function AccountMergeTool() {
                         <div>
                           <span className="font-medium text-navy-700">Website:</span>{" "}
                           <a
-                            href={accountDetails.account.website || undefined}
+                            href={accountDetails?.account?.website || undefined}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:underline"
                           >
-                            {accountDetails.account.website}
+                            {accountDetails?.account?.website}
                           </a>
                         </div>
                       )}
-                      {accountDetails.account.industry && (
+                      {accountDetails?.account?.industry && (
                         <div>
                           <span className="font-medium text-navy-700">Industry:</span>{" "}
-                          <span className="text-navy-900">{accountDetails.account.industry}</span>
+                          <span className="text-navy-900">{accountDetails?.account?.industry}</span>
                         </div>
                       )}
-                      {accountDetails.account.primary_contact_name && (
+                      {accountDetails?.account?.primary_contact_name && (
                         <div>
                           <span className="font-medium text-navy-700">Primary Contact:</span>{" "}
-                          <span className="text-navy-900">{accountDetails.account.primary_contact_name}</span>
+                          <span className="text-navy-900">{accountDetails?.account?.primary_contact_name}</span>
                         </div>
                       )}
-                      {accountDetails.account.primary_contact_email && (
+                      {accountDetails?.account?.primary_contact_email && (
                         <div className="flex items-center gap-2">
                           <Mail className="w-4 h-4 text-navy-400" />
-                          <span className="text-navy-900">{accountDetails.account.primary_contact_email}</span>
+                          <span className="text-navy-900">{accountDetails?.account?.primary_contact_email}</span>
                         </div>
                       )}
-                      {accountDetails.account.primary_contact_phone && (
+                      {accountDetails?.account?.primary_contact_phone && (
                         <div className="flex items-center gap-2">
                           <Phone className="w-4 h-4 text-navy-400" />
-                          <span className="text-navy-900">{accountDetails.account.primary_contact_phone}</span>
+                          <span className="text-navy-900">{accountDetails?.account?.primary_contact_phone}</span>
                         </div>
                       )}
                     </div>
@@ -493,10 +493,10 @@ export default function AccountMergeTool() {
                   <div>
                     <h4 className="text-lg font-semibold text-navy-900 mb-3 flex items-center gap-2">
                       <MapPin className="w-5 h-5" />
-                      Locations ({accountDetails.locations.length})
+                      Locations ({accountDetails?.locations?.length || 0})
                     </h4>
                     <div className="space-y-3">
-                      {accountDetails.locations.map((location) => (
+                      {accountDetails?.locations?.map((location) => (
                         <div key={location.id} className="bg-cream-50 rounded-lg p-4">
                           <div className="font-medium text-navy-900 mb-2">{location.name}</div>
                           {location.address_line1 && (
@@ -526,14 +526,14 @@ export default function AccountMergeTool() {
                   </div>
 
                   {/* Agreements */}
-                  {accountDetails.agreements.length > 0 && (
+                  {(accountDetails?.agreements?.length || 0) > 0 && (
                     <div>
                       <h4 className="text-lg font-semibold text-navy-900 mb-3 flex items-center gap-2">
                         <FileText className="w-5 h-5" />
-                        Agreements ({accountDetails.agreements.length})
+                        Agreements ({accountDetails?.agreements?.length || 0})
                       </h4>
                       <div className="space-y-2">
-                        {accountDetails.agreements.slice(0, 5).map((agreement) => (
+                        {accountDetails?.agreements?.slice(0, 5).map((agreement) => (
                           <div key={agreement.id} className="bg-cream-50 rounded-lg p-3">
                             <div className="font-medium text-navy-900">{agreement.title}</div>
                             <div className="text-sm text-navy-600">
@@ -541,9 +541,9 @@ export default function AccountMergeTool() {
                             </div>
                           </div>
                         ))}
-                        {accountDetails.agreements.length > 5 && (
+                        {(accountDetails?.agreements?.length || 0) > 5 && (
                           <div className="text-sm text-navy-600 text-center py-2">
-                            +{accountDetails.agreements.length - 5} more agreements
+                            +{(accountDetails?.agreements?.length || 0) - 5} more agreements
                           </div>
                         )}
                       </div>
@@ -551,14 +551,14 @@ export default function AccountMergeTool() {
                   )}
 
                   {/* Activities */}
-                  {accountDetails.activities.length > 0 && (
+                  {(accountDetails?.activities?.length || 0) > 0 && (
                     <div>
                       <h4 className="text-lg font-semibold text-navy-900 mb-3 flex items-center gap-2">
                         <Clock className="w-5 h-5" />
-                        Recent Activities ({accountDetails.activities.length})
+                        Recent Activities ({accountDetails?.activities?.length || 0})
                       </h4>
                       <div className="space-y-2">
-                        {accountDetails.activities.slice(0, 5).map((activity) => (
+                        {accountDetails?.activities?.slice(0, 5).map((activity) => (
                           <div key={activity.id} className="bg-cream-50 rounded-lg p-3">
                             <div className="font-medium text-navy-900">{activity.subject}</div>
                             <div className="text-sm text-navy-600">
@@ -566,9 +566,9 @@ export default function AccountMergeTool() {
                             </div>
                           </div>
                         ))}
-                        {accountDetails.activities.length > 5 && (
+                        {(accountDetails?.activities?.length || 0) > 5 && (
                           <div className="text-sm text-navy-600 text-center py-2">
-                            +{accountDetails.activities.length - 5} more activities
+                            +{(accountDetails?.activities?.length || 0) - 5} more activities
                           </div>
                         )}
                       </div>
@@ -576,14 +576,14 @@ export default function AccountMergeTool() {
                   )}
 
                   {/* Notes */}
-                  {accountDetails.notes.length > 0 && (
+                  {(accountDetails?.notes?.length || 0) > 0 && (
                     <div>
                       <h4 className="text-lg font-semibold text-navy-900 mb-3 flex items-center gap-2">
                         <StickyNote className="w-5 h-5" />
-                        Notes ({accountDetails.notes.length})
+                        Notes ({accountDetails?.notes?.length || 0})
                       </h4>
                       <div className="space-y-2">
-                        {accountDetails.notes.slice(0, 3).map((note) => (
+                        {accountDetails?.notes?.slice(0, 3).map((note) => (
                           <div key={note.id} className="bg-cream-50 rounded-lg p-3">
                             {note.title && (
                               <div className="font-medium text-navy-900 mb-1">{note.title}</div>
@@ -591,9 +591,9 @@ export default function AccountMergeTool() {
                             <div className="text-sm text-navy-600">{note.content}</div>
                           </div>
                         ))}
-                        {accountDetails.notes.length > 3 && (
+                        {(accountDetails?.notes?.length || 0) > 3 && (
                           <div className="text-sm text-navy-600 text-center py-2">
-                            +{accountDetails.notes.length - 3} more notes
+                            +{(accountDetails?.notes?.length || 0) - 3} more notes
                           </div>
                         )}
                       </div>
