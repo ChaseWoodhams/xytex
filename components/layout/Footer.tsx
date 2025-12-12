@@ -69,7 +69,7 @@ const trustBadges = [
 
 export default function Footer() {
   return (
-    <footer className="bg-navy-900 text-white">
+    <footer className="bg-navy-900 text-white w-full overflow-x-hidden">
       {/* Trust Badges Bar */}
       <div className="border-b border-navy-800">
         <div className="container-custom py-6">

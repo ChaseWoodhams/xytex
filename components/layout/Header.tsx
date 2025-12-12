@@ -111,29 +111,29 @@ export default function Header() {
       role="banner"
     >
       <nav className="container-custom" aria-label="Main navigation">
-        <div className="flex items-center justify-between h-20">
+        <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
           <Link 
             href="/" 
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 shrink-0"
             aria-label="Xytex home page"
           >
             <div className="relative">
               <span
-                className={`text-2xl font-bold font-heading tracking-tight transition-colors ${
+                className={`text-xl lg:text-2xl font-bold font-heading tracking-tight transition-colors ${
                   isScrolled ? "text-navy-900" : "text-white"
                 }`}
               >
                 Xytex
               </span>
-              <span className="absolute -top-1 -right-12 text-[10px] font-medium text-gold-500 tracking-wider">
+              <span className="absolute -top-1 -right-10 lg:-right-12 text-[9px] lg:text-[10px] font-medium text-gold-500 tracking-wider hidden sm:block">
                 SINCE 1975
               </span>
             </div>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-1" role="menubar">
+          <div className="hidden lg:flex items-center gap-0.5 xl:gap-1 flex-1 justify-center max-w-2xl mx-4" role="menubar">
             {navigation.main.map((item) => (
               <div
                 key={item.name}
@@ -153,7 +153,7 @@ export default function Header() {
               >
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                  className={`flex items-center gap-0.5 xl:gap-1 px-2.5 xl:px-4 py-2 text-xs xl:text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
                     isScrolled
                       ? "text-navy-700 hover:text-navy-900 hover:bg-navy-50"
                       : "text-white hover:text-gold-300 hover:bg-white/10"
@@ -164,7 +164,7 @@ export default function Header() {
                 >
                   {item.name}
                   {item.children && (
-                    <ChevronDown className="w-4 h-4 opacity-60" aria-hidden="true" />
+                    <ChevronDown className="w-3.5 xl:w-4 h-3.5 xl:h-4 opacity-60" aria-hidden="true" />
                   )}
                 </Link>
 
@@ -176,7 +176,7 @@ export default function Header() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute top-full left-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-navy-100 overflow-hidden"
+                      className="absolute top-full left-0 mt-2 w-64 xl:w-72 bg-white rounded-xl shadow-xl border border-navy-100 overflow-hidden"
                       role="menu"
                       aria-label={`${item.name} submenu`}
                     >
@@ -205,19 +205,20 @@ export default function Header() {
           </div>
 
           {/* Right Section */}
-          <div className="hidden lg:flex items-center gap-4">
+          <div className="hidden lg:flex items-center gap-2 xl:gap-4 shrink-0">
             {/* Phone */}
             <a
               href="tel:1-800-277-3210"
-              className={`flex items-center gap-2 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1.5 xl:gap-2 text-xs xl:text-sm font-medium transition-colors whitespace-nowrap ${
                 isScrolled
                   ? "text-navy-700 hover:text-gold-600"
                   : "text-white hover:text-gold-300"
               }`}
               aria-label="Call us at 1-800-277-3210"
             >
-              <Phone className="w-4 h-4" aria-hidden="true" />
-              <span>1-800-277-3210</span>
+              <Phone className="w-3.5 xl:w-4 h-3.5 xl:h-4" aria-hidden="true" />
+              <span className="hidden xl:inline">1-800-277-3210</span>
+              <span className="xl:hidden">800-277-3210</span>
             </a>
 
             {/* Auth Section - Show loading state or auth buttons */}
@@ -227,7 +228,7 @@ export default function Header() {
               <div className="relative">
                       <button
                         onClick={() => setUserMenuOpen(!userMenuOpen)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                        className={`flex items-center gap-1.5 xl:gap-2 px-3 xl:px-4 py-2 rounded-lg transition-colors ${
                           isScrolled
                             ? "text-navy-700 hover:bg-navy-50"
                             : "text-white hover:bg-white/10"
@@ -235,9 +236,9 @@ export default function Header() {
                         aria-label="User menu"
                         aria-expanded={userMenuOpen}
                       >
-                        <User className="w-4 h-4" aria-hidden="true" />
-                        <span className="text-sm font-medium">Account</span>
-                        <ChevronDown className="w-4 h-4" aria-hidden="true" />
+                        <User className="w-3.5 xl:w-4 h-3.5 xl:h-4" aria-hidden="true" />
+                        <span className="text-xs xl:text-sm font-medium whitespace-nowrap">Account</span>
+                        <ChevronDown className="w-3.5 xl:w-4 h-3.5 xl:h-4" aria-hidden="true" />
                       </button>
 
                       <AnimatePresence>
@@ -297,7 +298,7 @@ export default function Header() {
                 {/* Login/Signup Buttons */}
                 <Link
                   href="/login"
-                  className={`text-sm font-medium transition-colors ${
+                  className={`text-xs xl:text-sm font-medium transition-colors whitespace-nowrap ${
                     isScrolled
                       ? "text-navy-700 hover:text-gold-600"
                       : "text-white hover:text-gold-300"
@@ -307,9 +308,10 @@ export default function Header() {
                 </Link>
                 <Link
                   href="/signup"
-                  className="btn btn-primary text-sm px-5 py-2.5"
+                  className="btn btn-primary text-xs xl:text-sm px-4 xl:px-5 py-2 xl:py-2.5"
                 >
-                  Start Free Trial
+                  <span className="hidden xl:inline">Start Free Trial</span>
+                  <span className="xl:hidden">Start Trial</span>
                 </Link>
               </>
             )}

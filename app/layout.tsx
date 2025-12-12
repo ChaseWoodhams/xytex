@@ -66,11 +66,13 @@ export default function RootLayout({
           <a href="#main-content" className="skip-to-content">
             Skip to main content
           </a>
-          <ConditionalLayout>
-            <main id="main-content" tabIndex={-1}>
-              {children}
-            </main>
-          </ConditionalLayout>
+          <div className="min-h-screen w-full overflow-x-hidden">
+            <ConditionalLayout>
+              <main id="main-content" tabIndex={-1} className="w-full overflow-x-hidden">
+                {children}
+              </main>
+            </ConditionalLayout>
+          </div>
         </AuthProvider>
       </body>
     </html>

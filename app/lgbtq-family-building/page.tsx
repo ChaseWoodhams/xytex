@@ -672,7 +672,7 @@ export default function LGBTQFamilyBuildingPage() {
                     <p className="text-navy-700 font-medium mb-4">
                       <strong>Why families choose a sperm bank:</strong>
                     </p>
-                    <div className="overflow-x-auto">
+                    <div className="table-container">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b-2 border-gold-400">
@@ -1140,7 +1140,7 @@ export default function LGBTQFamilyBuildingPage() {
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto mb-6">
+                  <div className="table-container mb-6">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b-2 border-gold-400">

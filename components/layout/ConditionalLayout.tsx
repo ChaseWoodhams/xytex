@@ -19,10 +19,12 @@ export default function ConditionalLayout({ children }: { children: React.ReactN
   const isAdminRoute = mounted && pathname ? pathname.startsWith("/admin") : false;
 
   return (
-    <>
+    <div className="w-full overflow-x-hidden">
       {!isAdminRoute && <Header />}
-      {children}
+      <div className="w-full overflow-x-hidden">
+        {children}
+      </div>
       {!isAdminRoute && <Footer />}
-    </>
+    </div>
   );
 }

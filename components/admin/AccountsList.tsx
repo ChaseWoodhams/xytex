@@ -347,7 +347,7 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
         </div>
       ) : !loading ? (
         <>
-          <div className="overflow-x-auto">
+          <div className="table-container">
             <table className="w-full min-w-[1200px]">
               <thead>
                 <tr className="border-b border-navy-200">

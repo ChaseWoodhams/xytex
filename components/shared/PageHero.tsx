@@ -50,10 +50,10 @@ export default function PageHero({
       <div className="absolute inset-0 bg-gradient-to-br from-navy-950/50 via-transparent to-gold-900/20" />
 
       {/* Decorative Elements */}
-      <div className="absolute top-20 right-10 w-96 h-96 rounded-full bg-gold-500/10 blur-3xl" />
-      <div className="absolute bottom-20 left-10 w-80 h-80 rounded-full bg-navy-400/10 blur-3xl" />
+      <div className="absolute top-20 right-10 w-96 h-96 rounded-full bg-gold-500/10 blur-3xl max-w-[calc(100vw-5rem)] max-h-[calc(100vw-5rem)]" />
+      <div className="absolute bottom-20 left-10 w-80 h-80 rounded-full bg-navy-400/10 blur-3xl max-w-[calc(100vw-5rem)] max-h-[calc(100vw-5rem)]" />
 
-      <div className="container-custom relative z-10 pt-32 pb-20">
+      <div className="container-custom relative z-10 pt-24 lg:pt-28 xl:pt-32 pb-16 lg:pb-20">
         <div
           className={`${
             variant === "centered" ? "max-w-3xl mx-auto text-center" : "max-w-3xl"

@@ -30,8 +30,8 @@ export default function HeroSection() {
       <div className="absolute inset-0 bg-gradient-to-br from-navy-950/50 via-transparent to-gold-900/20 z-0" aria-hidden="true" />
 
       {/* Decorative Elements - z-0 (behind all content) */}
-      <div className="absolute top-40 right-20 w-96 h-96 rounded-full bg-gold-500 blur-3xl opacity-10 z-0" aria-hidden="true" />
-      <div className="absolute bottom-20 left-10 w-80 h-80 rounded-full bg-navy-400 blur-3xl opacity-[0.08] z-0" aria-hidden="true" />
+      <div className="absolute top-40 right-20 w-96 h-96 rounded-full bg-gold-500 blur-3xl opacity-10 z-0 max-w-[calc(100vw-5rem)] max-h-[calc(100vw-5rem)]" aria-hidden="true" />
+      <div className="absolute bottom-20 left-10 w-80 h-80 rounded-full bg-navy-400 blur-3xl opacity-[0.08] z-0 max-w-[calc(100vw-5rem)] max-h-[calc(100vw-5rem)]" aria-hidden="true" />
 
       <div className="container-custom relative z-10 pt-32 pb-16">
         <div className="max-w-4xl mx-auto text-center">

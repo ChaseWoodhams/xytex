@@ -117,6 +117,9 @@
 /* Base Styles */
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
 }
 
 body {
@@ -128,6 +131,10 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+  position: relative;
 }
 
 .font-body {
@@ -274,6 +281,8 @@ a {
   margin-right: auto;
   padding-left: 1.5rem;
   padding-right: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @media (min-width: 768px) {
@@ -281,6 +290,16 @@ a {
     padding-left: 2rem;
     padding-right: 2rem;
   }
+}
+
+/* Prevent horizontal overflow */
+* {
+  box-sizing: border-box;
+}
+
+*:before,
+*:after {
+  box-sizing: border-box;
 }
 
 /* Section Spacing - Enhanced for elegance */
@@ -476,4 +495,57 @@ a {
   border-radius: 0.5rem;
   text-decoration: none;
   font-weight: 600;
+}
+
+/* Content spacing utilities - accounts for fixed header */
+.content-spacing-top {
+  padding-top: 4rem; /* 64px - header height + spacing */
+}
+
+@media (min-width: 1024px) {
+  .content-spacing-top {
+    padding-top: 5rem; /* 80px - header height + spacing */
+  }
+}
+
+/* Admin layout responsive utilities */
+@media (max-width: 1023px) {
+  .admin-sidebar-mobile-hidden {
+    display: none;
+  }
+}
+
+/* Prevent overflow on all sections */
+section,
+main,
+article {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Ensure images and media don't overflow */
+img,
+video,
+iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Table overflow handling */
+.table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+}
+
+.table-container table {
+  min-width: 100%;
+  width: max-content;
+}
+
+/* Fix for absolute positioned decorative elements */
+.absolute {
+  max-width: 100vw;
 }
