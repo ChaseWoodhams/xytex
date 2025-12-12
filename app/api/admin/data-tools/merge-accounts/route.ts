@@ -91,22 +91,23 @@ export async function POST(request: Request) {
     // Create locations from UDF fields for accounts that need them
     for (const account of accountsNeedingLocations) {
       const accountWithUdf = account as any;
+      const locationData: any = {
+        account_id: account.id, // Temporarily assign to original account
+        name: account.name,
+        address_line1: accountWithUdf.udf_address_line1 || null,
+        address_line2: accountWithUdf.udf_address_line2 || null,
+        city: accountWithUdf.udf_city || null,
+        state: accountWithUdf.udf_state || null,
+        zip_code: accountWithUdf.udf_zipcode || null,
+        phone: accountWithUdf.udf_phone || null,
+        email: accountWithUdf.primary_contact_email || null,
+        contact_name: accountWithUdf.primary_contact_name || null,
+        is_primary: true,
+        status: 'active',
+      };
       const { error: createLocationError } = await adminClient
         .from('locations')
-        .insert({
-          account_id: account.id, // Temporarily assign to original account
-          name: account.name,
-          address_line1: accountWithUdf.udf_address_line1 || null,
-          address_line2: accountWithUdf.udf_address_line2 || null,
-          city: accountWithUdf.udf_city || null,
-          state: accountWithUdf.udf_state || null,
-          zip_code: accountWithUdf.udf_zipcode || null,
-          phone: accountWithUdf.udf_phone || null,
-          email: accountWithUdf.primary_contact_email || null,
-          contact_name: accountWithUdf.primary_contact_name || null,
-          is_primary: true,
-          status: 'active',
-        });
+        .insert(locationData);
 
       if (createLocationError) {
         console.warn(`Failed to create location from UDF fields for account ${account.id}:`, createLocationError);
