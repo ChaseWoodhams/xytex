@@ -18,8 +18,6 @@ interface AccountWithMetadata extends Account {
   locationCountries: string[];
   locationAddresses: string[];
   locationZipCodes: string[];
-  upload_batch_id?: string | null;
-  upload_list_name?: string | null;
 }
 
 interface AccountsListProps {

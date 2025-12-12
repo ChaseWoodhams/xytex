@@ -70,21 +70,30 @@ export async function revertAccountUpload(
     return { success: false, deletedCount: 0, error: 'Upload has already been reverted' };
   }
 
-  // First, delete all locations associated with accounts from this upload batch
-  // (cascade should handle this, but let's be explicit)
-  const { error: locDeleteError } = await supabase
-    .from('locations')
-    .delete()
-    .in('account_id', 
-      supabase
-        .from('accounts')
-        .select('id')
-        .eq('upload_batch_id', uploadId)
-    );
+  // First, get all account IDs from this upload batch
+  const { data: accountsToDelete, error: accountsFetchError } = await supabase
+    .from('accounts')
+    .select('id')
+    .eq('upload_batch_id', uploadId);
 
-  if (locDeleteError) {
-    console.error('Error deleting locations:', locDeleteError);
-    // Continue anyway - the account deletion might cascade
+  if (accountsFetchError) {
+    console.error('Error fetching accounts for deletion:', accountsFetchError);
+  }
+
+  const accountIds = (accountsToDelete as { id: string }[] | null)?.map(acc => acc.id) || [];
+
+  // Delete all locations associated with accounts from this upload batch
+  // (cascade should handle this, but let's be explicit)
+  if (accountIds.length > 0) {
+    const { error: locationDeleteError } = await supabase
+      .from('locations')
+      .delete()
+      .in('account_id', accountIds);
+
+    if (locationDeleteError) {
+      console.error('Error deleting locations:', locationDeleteError);
+      // Continue anyway - the account deletion might cascade
+    }
   }
 
   // Delete all accounts associated with this upload batch

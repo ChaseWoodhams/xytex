@@ -120,7 +120,8 @@ export async function getPaginatedAccountsWithMetadata(
     };
   }
 
-  const accountIds = allAccounts.map(acc => acc.id);
+  const accountsData = allAccounts as Account[];
+  const accountIds = accountsData.map(acc => acc.id);
 
   // Get all locations for these accounts in one query
   const { data: locations, error: locationsError } = await supabase
@@ -130,12 +131,24 @@ export async function getPaginatedAccountsWithMetadata(
 
   if (locationsError) {
     console.error('Error fetching locations:', locationsError);
-    // Continue with empty locations array
   }
 
+  type LocationData = { 
+    id: string; 
+    account_id: string; 
+    city: string | null; 
+    state: string | null; 
+    country: string | null; 
+    address_line1: string | null; 
+    zip_code: string | null; 
+    license_document_url: string | null;
+  };
+  const locationsData = (locations || []) as LocationData[];
+
   // Get all agreements for locations in these accounts
-  const locationIds = locations?.map(loc => loc.id) || [];
-  let agreements: any[] = [];
+  const locationIds = locationsData.map(loc => loc.id);
+  type AgreementData = { id: string; location_id: string; signed_date: string | null; status: string };
+  let agreements: AgreementData[] = [];
   
   if (locationIds.length > 0) {
     const { data: agreementsData, error: agreementsError } = await supabase
@@ -147,13 +160,13 @@ export async function getPaginatedAccountsWithMetadata(
     if (agreementsError) {
       console.error('Error fetching agreements:', agreementsError);
     } else {
-      agreements = agreementsData || [];
+      agreements = (agreementsData || []) as AgreementData[];
     }
   }
 
   // Group locations by account_id
-  const locationsByAccount = new Map<string, typeof locations>();
-  locations?.forEach(loc => {
+  const locationsByAccount = new Map<string, LocationData[]>();
+  locationsData.forEach(loc => {
     if (!locationsByAccount.has(loc.account_id)) {
       locationsByAccount.set(loc.account_id, []);
     }
@@ -161,7 +174,7 @@ export async function getPaginatedAccountsWithMetadata(
   });
 
   // Group agreements by location_id, then by account_id
-  const agreementsByLocation = new Map<string, typeof agreements>();
+  const agreementsByLocation = new Map<string, AgreementData[]>();
   agreements.forEach(agreement => {
     if (!agreementsByLocation.has(agreement.location_id)) {
       agreementsByLocation.set(agreement.location_id, []);
@@ -169,8 +182,8 @@ export async function getPaginatedAccountsWithMetadata(
     agreementsByLocation.get(agreement.location_id)!.push(agreement);
   });
 
-  const agreementsByAccount = new Map<string, typeof agreements>();
-  locations?.forEach(loc => {
+  const agreementsByAccount = new Map<string, AgreementData[]>();
+  locationsData.forEach(loc => {
     const locAgreements = agreementsByLocation.get(loc.id) || [];
     if (!agreementsByAccount.has(loc.account_id)) {
       agreementsByAccount.set(loc.account_id, []);
@@ -179,7 +192,7 @@ export async function getPaginatedAccountsWithMetadata(
   });
 
   // Build enriched accounts with metadata for ALL accounts
-  const enrichedAccounts: AccountWithMetadata[] = allAccounts.map(account => {
+  const enrichedAccounts: AccountWithMetadata[] = accountsData.map(account => {
     const accountLocations = locationsByAccount.get(account.id) || [];
     const accountAgreements = agreementsByAccount.get(account.id) || [];
     
@@ -189,15 +202,15 @@ export async function getPaginatedAccountsWithMetadata(
     // Check for licenses (any location has license_document_url)
     const hasLicenses = accountLocations.some(loc => loc.license_document_url != null && loc.license_document_url.trim() !== '');
     
-    // Get most recent contract date
-    const signedAgreements = accountAgreements
-      .filter(ag => ag.signed_date)
-      .sort((a, b) => {
-        const dateA = new Date(a.signed_date).getTime();
-        const dateB = new Date(b.signed_date).getTime();
-        return dateB - dateA;
-      });
-    const mostRecentContractDate = signedAgreements.length > 0 ? signedAgreements[0].signed_date : null;
+      // Get most recent contract date
+      const signedAgreements = accountAgreements
+        .filter((ag): ag is AgreementData & { signed_date: string } => ag.signed_date !== null && ag.signed_date !== undefined)
+        .sort((a, b) => {
+          const dateA = new Date(a.signed_date).getTime();
+          const dateB = new Date(b.signed_date).getTime();
+          return dateB - dateA;
+        });
+      const mostRecentContractDate = signedAgreements.length > 0 ? signedAgreements[0].signed_date : null;
 
     // Collect unique cities, states, countries, addresses, zip codes
     const citySet = new Set<string>();

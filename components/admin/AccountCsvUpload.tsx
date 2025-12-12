@@ -389,9 +389,10 @@ export default function AccountCsvUpload({
                 <div className="space-y-3">
                   {parsedCsv.headers.map((header, index) => {
                     const sampleValue = parsedCsv.data[0]?.[header] || "";
-                    const isMapped = columnMapping[header] && columnMapping[header] !== "";
-                    const mappedField = isMapped 
-                      ? ACCOUNT_CSV_FIELDS.find(f => f.key === columnMapping[header])
+                    const mappedValue = columnMapping[header];
+                    const isMapped = Boolean(mappedValue && mappedValue.length > 0);
+                    const mappedField = mappedValue && mappedValue.length > 0
+                      ? ACCOUNT_CSV_FIELDS.find(f => f.key === mappedValue as AccountCsvFieldKey)
                       : null;
 
                     return (
