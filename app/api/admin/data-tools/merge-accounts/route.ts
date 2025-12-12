@@ -80,10 +80,19 @@ export async function POST(request: Request) {
       throw locationsError;
     }
 
+    // Type assertion for locations
+    type LocationRow = {
+      id: string;
+      account_id: string;
+      name: string;
+      [key: string]: any;
+    };
+    const allLocationsData = (allLocations || []) as LocationRow[];
+
     // For single-location accounts, check if location data is in UDF fields
     // and create locations from UDF fields if they don't exist in locations table
     const accountsNeedingLocations = accountsData.filter(acc => {
-      const hasLocationInTable = allLocations?.some((loc: any) => loc.account_id === acc.id);
+      const hasLocationInTable = allLocationsData.some(loc => loc.account_id === acc.id);
       const hasUdfLocationData = (acc as any).udf_address_line1 || (acc as any).udf_city || (acc as any).udf_state;
       return !hasLocationInTable && hasUdfLocationData;
     });
@@ -124,9 +133,12 @@ export async function POST(request: Request) {
       throw updatedLocationsError;
     }
 
-    const locationsToReassign = updatedLocations?.filter(
+    // Type assertion for updated locations
+    const locationsData = (updatedLocations || []) as LocationRow[];
+
+    const locationsToReassign = locationsData.filter(
       loc => accountsToDeleteIds.includes(loc.account_id)
-    ) || [];
+    );
 
     // Reassign all locations from merged accounts to primary account
     if (locationsToReassign.length > 0) {
