@@ -25,7 +25,7 @@ export default function AccountUploadHistory({
   uploads,
   onRevert,
 }: AccountUploadHistoryProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [revertingId, setRevertingId] = useState<string | null>(null);
   const [confirmRevert, setConfirmRevert] = useState<AccountUpload | null>(null);
   const router = useRouter();

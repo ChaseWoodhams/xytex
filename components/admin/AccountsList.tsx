@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Account } from "@/lib/supabase/types";
-import { Search, Building2, Trash2, Edit, X, MapPin, MapPinned, Upload, FileSpreadsheet, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Building2, Trash2, Edit, X, MapPin, MapPinned, Upload, ChevronLeft, ChevronRight } from "lucide-react";
 import AccountForm from "./AccountForm";
 import AccountCsvUpload from "./AccountCsvUpload";
 
@@ -406,13 +406,6 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
                               );
                             }
                           })()}
-                          {/* Upload List Badge */}
-                          {account.upload_list_name && (
-                            <span className="px-2 py-1 text-xs font-semibold bg-indigo-100 text-indigo-700 rounded-full flex items-center gap-1">
-                              <FileSpreadsheet className="w-3 h-3" />
-                              {account.upload_list_name}
-                            </span>
-                          )}
                         </div>
                       </td>
                       <td className="py-3 px-4 text-sm text-navy-600">
