@@ -27,6 +27,7 @@ interface AccountsListProps {
 type CountryFilter = 'US' | 'CA' | 'UK' | 'INTL' | 'ALL';
 type ContractFilter = 'ALL' | 'HAS_CONTRACTS' | 'NO_CONTRACTS';
 type LicenseFilter = 'ALL' | 'HAS_LICENSES' | 'NO_LICENSES';
+type AccountTypeFilter = 'ALL' | 'SINGLE_LOCATION' | 'MULTI_LOCATION';
 
 // Helper function to normalize country codes for filtering
 function normalizeCountry(country: string | null | undefined): CountryFilter | null {
@@ -97,6 +98,7 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
   const [countryFilter, setCountryFilter] = useState<CountryFilter>('ALL');
   const [contractFilter, setContractFilter] = useState<ContractFilter>('ALL');
   const [licenseFilter, setLicenseFilter] = useState<LicenseFilter>('ALL');
+  const [accountTypeFilter, setAccountTypeFilter] = useState<AccountTypeFilter>('ALL');
   const [accounts, setAccounts] = useState<AccountWithMetadata[]>(initialAccounts || []);
   const [loading, setLoading] = useState(!initialAccounts);
   const [page, setPage] = useState(1);
@@ -108,7 +110,7 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
   const [showCsvUpload, setShowCsvUpload] = useState(false);
 
   // Fetch accounts with pagination
-  const fetchAccounts = async (pageNum: number, search?: string, country?: CountryFilter, contracts?: ContractFilter, licenses?: LicenseFilter) => {
+  const fetchAccounts = async (pageNum: number, search?: string, country?: CountryFilter, contracts?: ContractFilter, licenses?: LicenseFilter, accountType?: AccountTypeFilter) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -137,6 +139,10 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
         params.append('country', country);
       }
 
+      if (accountType && accountType !== 'ALL') {
+        params.append('accountType', accountType);
+      }
+
       const response = await fetch(`/api/admin/accounts?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch accounts');
@@ -156,14 +162,14 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
 
   // Fetch accounts when filters or page change
   useEffect(() => {
-    fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, contractFilter, licenseFilter);
-  }, [page, searchQuery, countryFilter, contractFilter, licenseFilter]);
+    fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, contractFilter, licenseFilter, accountTypeFilter);
+  }, [page, searchQuery, countryFilter, contractFilter, licenseFilter, accountTypeFilter]);
 
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       if (page === 1) {
-        fetchAccounts(1, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, contractFilter, licenseFilter);
+        fetchAccounts(1, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, contractFilter, licenseFilter, accountTypeFilter);
       } else {
         setPage(1); // Reset to first page when search changes
       }
@@ -173,7 +179,7 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
   }, [searchQuery]);
 
   const handleEditSuccess = () => {
-    fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, contractFilter, licenseFilter);
+    fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, contractFilter, licenseFilter, accountTypeFilter);
     setEditingAccount(null);
   };
 
@@ -197,7 +203,7 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
       }
 
       // Refresh the current page
-      fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, contractFilter, licenseFilter);
+      fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, contractFilter, licenseFilter, accountTypeFilter);
     } catch (error: any) {
       console.error('Error deleting account:', error);
       alert(`Failed to delete account: ${error.message}`);
@@ -293,6 +299,28 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
                   }`}
                 >
                   {filter === 'HAS_LICENSES' ? 'Has Licenses' : filter === 'NO_LICENSES' ? 'No Licenses' : 'All'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-navy-700">Account Type:</span>
+            <div className="flex gap-2">
+              {(['ALL', 'SINGLE_LOCATION', 'MULTI_LOCATION'] as AccountTypeFilter[]).map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => {
+                    setAccountTypeFilter(filter);
+                    setPage(1);
+                  }}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    accountTypeFilter === filter
+                      ? 'bg-gold-600 text-white'
+                      : 'bg-navy-100 text-navy-700 hover:bg-navy-200'
+                  }`}
+                >
+                  {filter === 'SINGLE_LOCATION' ? 'Single Location' : filter === 'MULTI_LOCATION' ? 'Multi Location' : 'All'}
                 </button>
               ))}
             </div>
@@ -561,7 +589,7 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
           onClose={() => setShowCsvUpload(false)}
           onSuccess={() => {
             setShowCsvUpload(false);
-            fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, contractFilter, licenseFilter);
+            fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, contractFilter, licenseFilter, accountTypeFilter);
           }}
         />
       )}

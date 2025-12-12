@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { Building2, LogOut, User, UserPlus } from "lucide-react";
+import { Building2, LogOut, User, UserPlus, Wrench } from "lucide-react";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
@@ -44,6 +44,17 @@ export default function AdminSidebar() {
           >
             <UserPlus className="w-5 h-5" />
             <span>Invitations</span>
+          </Link>
+          <Link
+            href="/admin/data-tools"
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              pathname?.startsWith("/admin/data-tools")
+                ? "bg-gold-600 text-white"
+                : "hover:bg-navy-800"
+            }`}
+          >
+            <Wrench className="w-5 h-5" />
+            <span>Data Tools</span>
           </Link>
         </nav>
       </div>

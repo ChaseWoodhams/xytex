@@ -66,6 +66,12 @@ export async function GET(request: Request) {
       filters.country = countryParam as 'US' | 'CA' | 'UK' | 'INTL';
     }
 
+    // Account type filter
+    const accountTypeParam = searchParams.get('accountType');
+    if (accountTypeParam && ['SINGLE_LOCATION', 'MULTI_LOCATION'].includes(accountTypeParam)) {
+      filters.accountType = accountTypeParam === 'SINGLE_LOCATION' ? 'single_location' : 'multi_location';
+    }
+
     // Use paginated endpoint if requested
     if (usePagination) {
       const page = pageParam ? parseInt(pageParam, 10) : 1;

@@ -10,6 +10,7 @@ export interface AccountFilters {
   country?: CountryFilter; // Filter by country
   hasContracts?: boolean; // true = has contracts, false = no contracts, undefined = all
   hasLicenses?: boolean; // true = has licenses, false = no licenses, undefined = all
+  accountType?: 'single_location' | 'multi_location'; // Filter by account type
 }
 
 export interface PaginatedAccountsResult {
@@ -93,6 +94,10 @@ export async function getPaginatedAccountsWithMetadata(
 
   if (filters?.industry) {
     baseQuery = baseQuery.eq('industry', filters.industry);
+  }
+
+  if (filters?.accountType) {
+    baseQuery = baseQuery.eq('account_type', filters.accountType);
   }
 
   if (filters?.search) {
