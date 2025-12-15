@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Playfair_Display, DM_Sans } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import ConditionalLayout from "@/components/layout/ConditionalLayout";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import "./globals.css";
@@ -73,6 +74,7 @@ export default function RootLayout({
               </main>
             </ConditionalLayout>
           </div>
+          <SpeedInsights />
         </AuthProvider>
       </body>
     </html>
