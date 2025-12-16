@@ -1,11 +1,13 @@
 import { createClient } from '@/lib/supabase/server';
-import { uploadLocationAgreementDocument, updateLocationAgreementDocumentUrl, getLocationById } from '@/lib/supabase/locations';
+import { getLocationById, updateLocationAgreementDocumentUrl } from '@/lib/supabase/locations';
 import { createAgreement } from '@/lib/supabase/agreements';
 import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
-import { extractPdfMetadata } from '@/lib/utils/pdf-extract';
 import { NextResponse } from 'next/server';
 
+// This route now only records metadata for an agreement whose PDF has already
+// been uploaded directly from the client to Supabase Storage.
+// This keeps the request body small so we don't hit Vercel's 4.5MB limit.
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -26,51 +28,19 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-    const signedDate = formData.get('signed_date') as string | null;
+    const body = await request.json();
+    const { document_url, file_name, signed_date } = body as {
+      document_url?: string;
+      file_name?: string;
+      signed_date?: string | null;
+    };
 
-    if (!file) {
+    if (!document_url) {
       return NextResponse.json(
-        { error: 'No file provided' },
+        { error: 'document_url is required' },
         { status: 400 }
       );
     }
-
-    // Validate file type (only PDFs)
-    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-      return NextResponse.json(
-        { error: 'Only PDF files are allowed' },
-        { status: 400 }
-      );
-    }
-
-    // Extract metadata from PDF before uploading
-    let extractedMetadata;
-    try {
-      console.log('Starting PDF metadata extraction for file:', file.name);
-      extractedMetadata = await extractPdfMetadata(file);
-      console.log('Extracted PDF metadata:', JSON.stringify(extractedMetadata, null, 2));
-    } catch (extractError: any) {
-      console.error('Failed to extract PDF metadata:', {
-        error: extractError.message,
-        stack: extractError.stack,
-        fileName: file.name
-      });
-      extractedMetadata = {};
-    }
-
-    // Upload the document
-    const uploadResult = await uploadLocationAgreementDocument(file, id, file.name);
-
-    if ('error' in uploadResult) {
-      return NextResponse.json(
-        { error: uploadResult.error },
-        { status: 500 }
-      );
-    }
-
-    const documentUrl = uploadResult.url;
 
     // Get location to get account_id
     const location = await getLocationById(id);
@@ -81,37 +51,29 @@ export async function POST(
       );
     }
 
-    // Create an agreement record for this uploaded document
-    // Use extracted metadata where available, fallback to defaults
-    // Manual signed_date from form takes precedence over extracted metadata
+    const baseTitle =
+      (file_name
+        ? file_name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ')
+        : null) || 'Location Agreement Document';
+
     const agreementData = {
       account_id: location.account_id,
       location_id: id,
       agreement_type: 'other' as const,
-      title: extractedMetadata.title || file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') || 'Location Agreement Document',
+      title: baseTitle,
       start_date: null,
       end_date: null,
       terms: null,
       revenue_share_percentage: null,
       monthly_fee: null,
       status: 'active' as const,
-      document_url: documentUrl,
-      notes: `Uploaded agreement document: ${file.name}`,
-      signed_date: signedDate || extractedMetadata.signedDate || null,
-      signer_name: extractedMetadata.signerName || null,
-      signer_email: extractedMetadata.signerEmail || null,
+      document_url,
+      notes: `Uploaded agreement document: ${file_name || 'Unknown filename'}`,
+      signed_date: signed_date || null,
+      signer_name: null,
+      signer_email: null,
       created_by: user.id,
     };
-
-    console.log('Creating agreement with data:', {
-      account_id: agreementData.account_id,
-      location_id: agreementData.location_id,
-      title: agreementData.title,
-      signed_date: agreementData.signed_date,
-      signer_name: agreementData.signer_name,
-      signer_email: agreementData.signer_email,
-      created_by: agreementData.created_by
-    });
 
     let agreement;
     try {
@@ -122,36 +84,37 @@ export async function POST(
         stack: agreementError.stack,
         agreementData
       });
-      // If agreement creation fails, still update the location with the document URL
-      // so the document isn't lost
-      await updateLocationAgreementDocumentUrl(id, documentUrl);
+      await updateLocationAgreementDocumentUrl(id, document_url);
       return NextResponse.json(
-        { error: `Document uploaded but failed to create agreement record: ${agreementError.message}`, document_url: documentUrl },
+        {
+          error: `Document uploaded but failed to create agreement record: ${agreementError.message}`,
+          document_url,
+        },
         { status: 500 }
       );
     }
 
     if (!agreement) {
       console.error('Agreement creation returned null');
-      await updateLocationAgreementDocumentUrl(id, documentUrl);
+      await updateLocationAgreementDocumentUrl(id, document_url);
       return NextResponse.json(
-        { error: 'Document uploaded but failed to create agreement record', document_url: documentUrl },
+        {
+          error: 'Document uploaded but failed to create agreement record',
+          document_url,
+        },
         { status: 500 }
       );
     }
 
-    console.log('Agreement created successfully:', agreement.id);
-
     // Also update the location with the document URL for backward compatibility
-    await updateLocationAgreementDocumentUrl(id, documentUrl);
+    await updateLocationAgreementDocumentUrl(id, document_url);
 
-    return NextResponse.json({ 
-      document_url: documentUrl,
+    return NextResponse.json({
+      document_url,
       agreement_id: agreement.id,
-      extracted_metadata: extractedMetadata // Include for debugging
     });
   } catch (error: any) {
-    console.error('Error uploading location agreement document:', error);
+    console.error('Error recording location agreement metadata:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

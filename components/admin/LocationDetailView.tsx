@@ -8,6 +8,7 @@ import { ArrowLeft, MapPin, Building2, FileText, Trash2, Upload, Download, X, Sh
 import AgreementsList from "./AgreementsList";
 import LocationContacts from "./LocationContacts";
 import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
+import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 interface LocationDetailViewProps {
   location: Location;
@@ -60,17 +61,55 @@ export default function LocationDetailView({
     setUploadError(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      // 1) Upload file directly to Supabase Storage from the browser
+      const supabase = createSupabaseBrowserClient();
+      const fileExt = file.name.split('.').pop() || 'pdf';
+      const baseName = file.name.replace(/\.[^/.]+$/, '');
+      const uniqueId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+      const storageFileName = `${baseName}-${uniqueId}.${fileExt}`;
+      const filePath = `location-agreements/location-${location.id}-${storageFileName}`;
 
+      const { error: uploadError } = await supabase.storage
+        .from('agreements')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: file.type || 'application/pdf',
+        });
+
+      if (uploadError) {
+        console.error('Error uploading location agreement PDF to Supabase Storage:', uploadError);
+        throw new Error(uploadError.message || 'Failed to upload document to storage');
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('agreements')
+        .getPublicUrl(filePath);
+
+      if (!urlData?.publicUrl) {
+        throw new Error('Failed to generate public URL for uploaded document');
+      }
+
+      const documentUrl = urlData.publicUrl;
+
+      // 2) Call lightweight API route to record agreement metadata in the database
       const response = await fetch(`/api/admin/locations/${location.id}/upload`, {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          document_url: documentUrl,
+          file_name: file.name,
+          signed_date: null,
+        }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to upload document');
+        throw new Error(error.error || 'Failed to record agreement metadata');
       }
 
       const data = await response.json();
@@ -136,21 +175,56 @@ export default function LocationDetailView({
     setUploadLicenseError(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      // 1) Upload license PDF directly to Supabase Storage from the browser
+      const supabase = createSupabaseBrowserClient();
+      const fileExt = file.name.split('.').pop() || 'pdf';
+      const baseName = file.name.replace(/\.[^/.]+$/, '');
+      const uniqueId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+      const storageFileName = `${baseName}-${uniqueId}.${fileExt}`;
+      const filePath = `location-licenses/license-${location.id}-${storageFileName}`;
 
-      const response = await fetch(`/api/admin/locations/${location.id}/upload-license`, {
-        method: 'POST',
-        body: formData,
+      const { error: uploadError } = await supabase.storage
+        .from('agreements')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: file.type || 'application/pdf',
+        });
+
+      if (uploadError) {
+        console.error('Error uploading location license PDF to Supabase Storage:', uploadError);
+        throw new Error(uploadError.message || 'Failed to upload license document to storage');
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('agreements')
+        .getPublicUrl(filePath);
+
+      if (!urlData?.publicUrl) {
+        throw new Error('Failed to generate public URL for uploaded license document');
+      }
+
+      const documentUrl = urlData.publicUrl;
+
+      // 2) Update location with new license URL via existing PATCH endpoint
+      const response = await fetch(`/api/admin/locations/${location.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          license_document_url: documentUrl,
+        }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to upload license document');
+        throw new Error(error.error || 'Failed to update license document URL');
       }
 
-      const data = await response.json();
-      setCurrentLicenseUrl(data.document_url);
+      setCurrentLicenseUrl(documentUrl);
       router.refresh();
     } catch (error: any) {
       console.error('Error uploading license document:', error);
