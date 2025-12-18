@@ -23,6 +23,10 @@ export default function LocationsList({ accountId, locations, locationAgreements
   const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [uploads, setUploads] = useState<LocationUpload[]>([]);
+  const [updatingPendingContract, setUpdatingPendingContract] = useState<Set<string>>(new Set());
+  const [locationPendingContract, setLocationPendingContract] = useState<Map<string, boolean>>(
+    new Map(locations.map(loc => [loc.id, loc.pending_contract_sent]))
+  );
   const router = useRouter();
 
   // Fetch upload history
@@ -41,6 +45,11 @@ export default function LocationsList({ accountId, locations, locationAgreements
     fetchUploads();
   }, [accountId]);
 
+  // Sync pending contract state when locations change
+  useEffect(() => {
+    setLocationPendingContract(new Map(locations.map(loc => [loc.id, loc.pending_contract_sent])));
+  }, [locations]);
+
   const refreshUploads = async () => {
     try {
       const response = await fetch(`/api/admin/locations/uploads?accountId=${accountId}`);
@@ -50,6 +59,38 @@ export default function LocationsList({ accountId, locations, locationAgreements
       }
     } catch (error) {
       console.error('Error fetching uploads:', error);
+    }
+  };
+
+  // Update location pending contract status
+  const handleTogglePendingContract = async (locationId: string, checked: boolean) => {
+    setUpdatingPendingContract(prev => new Set(prev).add(locationId));
+    try {
+      const response = await fetch(`/api/admin/locations/${locationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pending_contract_sent: checked }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update pending contract status');
+      }
+
+      setLocationPendingContract(prev => {
+        const newMap = new Map(prev);
+        newMap.set(locationId, checked);
+        return newMap;
+      });
+      router.refresh();
+    } catch (error: any) {
+      console.error('Error updating pending contract status:', error);
+      alert(`Failed to update pending contract status: ${error.message}`);
+    } finally {
+      setUpdatingPendingContract(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(locationId);
+        return newSet;
+      });
     }
   };
 
@@ -163,6 +204,12 @@ export default function LocationsList({ accountId, locations, locationAgreements
                           {location.upload_list_name}
                         </span>
                       )}
+                      {/* Pending Contract Badge */}
+                      {locationPendingContract.get(location.id) && (
+                        <span className="px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full">
+                          Contract Sent (Pending)
+                        </span>
+                      )}
                     </div>
                   <div className="text-sm text-navy-600 space-y-1">
                     {location.address_line1 && (
@@ -211,23 +258,39 @@ export default function LocationsList({ accountId, locations, locationAgreements
                       <p className="mt-2 text-sm text-navy-600">{location.notes}</p>
                     )}
                   </div>
-                  <div className="flex gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
-                    <Link
-                      href={`/admin/locations/${location.id}`}
-                      className="p-2 text-navy-600 hover:text-gold-600 hover:bg-gold-50 rounded-lg transition-colors"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Link>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteLocationId(location.id);
-                      }}
-                      className="p-2 text-navy-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  <div className="flex flex-col gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
+                    {/* Pending Contract Toggle */}
+                    <label className="flex items-center gap-2 cursor-pointer p-2 hover:bg-blue-50 rounded-lg transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={locationPendingContract.get(location.id) || false}
+                        onChange={(e) => handleTogglePendingContract(location.id, e.target.checked)}
+                        disabled={updatingPendingContract.has(location.id)}
+                        className="w-4 h-4 text-blue-600 border-navy-300 rounded focus:ring-blue-500 focus:ring-2"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <span className={`text-xs ${locationPendingContract.get(location.id) ? 'text-blue-700 font-medium' : 'text-navy-600'}`}>
+                        Contract Sent
+                      </span>
+                    </label>
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/admin/locations/${location.id}`}
+                        className="p-2 text-navy-600 hover:text-gold-600 hover:bg-gold-50 rounded-lg transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Link>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteLocationId(location.id);
+                        }}
+                        className="p-2 text-navy-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

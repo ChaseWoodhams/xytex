@@ -8,9 +8,8 @@ export interface AccountFilters {
   industry?: string;
   search?: string;
   country?: CountryFilter; // Filter by country
-  hasContracts?: boolean; // true = has contracts, false = no contracts, undefined = all
-  hasLicenses?: boolean; // true = has licenses, false = no licenses, undefined = all
   accountType?: 'single_location' | 'multi_location'; // Filter by account type
+  sortByStatus?: 'red' | 'yellow' | 'green'; // Sort by document status
 }
 
 export interface PaginatedAccountsResult {
@@ -31,6 +30,8 @@ export interface AccountWithMetadata extends Account {
   locationCountries: string[];
   locationAddresses: string[];
   locationZipCodes: string[];
+  documentStatus: 'red' | 'yellow' | 'green';
+  pendingContractCount: number; // Number of locations with pending contracts (for multi-location) or 1/0 for single-location
 }
 
 export async function getAccounts(
@@ -71,6 +72,128 @@ export async function getAccounts(
   const accounts = data || [];
   console.log(`[getAccounts] Found ${accounts.length} accounts`);
   return accounts;
+}
+
+// Type definitions for internal use
+type LocationData = { 
+  id: string; 
+  account_id: string; 
+  city: string | null; 
+  state: string | null; 
+  country: string | null; 
+  address_line1: string | null; 
+  zip_code: string | null; 
+  license_document_url: string | null;
+  agreement_document_url: string | null;
+  updated_at: string;
+  pending_contract_sent: boolean;
+};
+
+type AgreementData = { 
+  id: string; 
+  account_id: string; 
+  location_id: string | null; 
+  signed_date: string | null; 
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string;
+  status: string;
+};
+
+/**
+ * Calculate document status for an account based on contracts and licenses
+ * - Red: No contracts AND no licenses (neither account-level nor location-level)
+ * - Yellow: Account OR any location has at least one document, but not all locations have both contract AND license
+ *   OR if any contract is pending (pending_contract_sent = true)
+ * - Green: ALL locations have BOTH a contract AND a license (and no contracts are pending)
+ */
+function calculateDocumentStatus(
+  locations: LocationData[],
+  agreementsByLocation: Map<string, AgreementData[]>,
+  accountAgreements: AgreementData[] = [],
+  accountPendingContractSent: boolean = false
+): 'red' | 'yellow' | 'green' {
+  // Check for pending contracts first - if any are pending, always return yellow
+  if (accountPendingContractSent) {
+    return 'yellow';
+  }
+  
+  // Check if any location has a pending contract
+  const hasPendingLocationContract = locations.some(loc => loc.pending_contract_sent);
+  if (hasPendingLocationContract) {
+    return 'yellow';
+  }
+
+  // Handle accounts with no locations
+  if (locations.length === 0) {
+    // If account has agreements even without locations, it's at least yellow
+    if (accountAgreements.length > 0) {
+      return 'yellow';
+    }
+    return 'red';
+  }
+
+  // Get all location IDs for this account
+  const locationIds = new Set(locations.map(loc => loc.id));
+  
+  // Check if account has any agreements (account-level agreements apply to all locations)
+  // An agreement is account-level if it has no location_id, or if it's linked to any location in this account
+  const hasAccountLevelAgreements = accountAgreements.some(ag => 
+    !ag.location_id || locationIds.has(ag.location_id)
+  );
+
+  // Helper to check if a location has a contract
+  const hasContract = (locationId: string, agreementDocUrl: string | null): boolean => {
+    // Check if location has agreement_document_url
+    const hasAgreementDoc = agreementDocUrl != null && agreementDocUrl.trim() !== '';
+    // Check if location has agreements in the agreements table (location-specific)
+    const locationAgreements = agreementsByLocation.get(locationId) || [];
+    const hasLocationAgreements = locationAgreements.length > 0;
+    // Account-level agreements apply to all locations
+    return hasAgreementDoc || hasLocationAgreements || hasAccountLevelAgreements;
+  };
+
+  // Helper to check if a location has a license
+  const hasLicense = (licenseDocUrl: string | null): boolean => {
+    return licenseDocUrl != null && licenseDocUrl.trim() !== '';
+  };
+
+  // Check each location for contracts and licenses
+  let hasAnyContract = false;
+  let hasAnyLicense = false;
+  let allLocationsComplete = true;
+
+  for (const location of locations) {
+    const locationHasContract = hasContract(location.id, location.agreement_document_url);
+    const locationHasLicense = hasLicense(location.license_document_url);
+
+    if (locationHasContract) hasAnyContract = true;
+    if (locationHasLicense) hasAnyLicense = true;
+
+    // A location is complete if it has both contract AND license
+    if (!locationHasContract || !locationHasLicense) {
+      allLocationsComplete = false;
+    }
+  }
+
+  // Debug logging for Acorn Fertility
+  const isAcorn = locations.some(loc => loc.agreement_document_url && loc.agreement_document_url.includes('Acorn'));
+  if (isAcorn || hasAccountLevelAgreements) {
+    console.log(`[Status Calc Detail] hasAnyContract=${hasAnyContract}, hasAnyLicense=${hasAnyLicense}, allLocationsComplete=${allLocationsComplete}, hasAccountLevelAgreements=${hasAccountLevelAgreements}`);
+  }
+
+  // Red: No contracts AND no licenses
+  if (!hasAnyContract && !hasAnyLicense) {
+    return 'red';
+  }
+
+  // Green: All locations have both contract AND license
+  if (allLocationsComplete) {
+    return 'green';
+  }
+
+  // Yellow: At least one document exists but not all locations are complete
+  return 'yellow';
 }
 
 /**
@@ -128,44 +251,58 @@ export async function getPaginatedAccountsWithMetadata(
   const accountsData = allAccounts as Account[];
   const accountIds = accountsData.map(acc => acc.id);
 
-  // Get all locations for these accounts in one query
-  const { data: locations, error: locationsError } = await supabase
-    .from('locations')
-    .select('id, account_id, city, state, country, address_line1, zip_code, license_document_url')
-    .in('account_id', accountIds);
+  // Batch size for queries (PostgreSQL has limits on .in() array size)
+  const BATCH_SIZE = 100; // PostgreSQL typically handles up to ~1000 items, but we'll use 100 to be safe
 
-  if (locationsError) {
-    console.error('Error fetching locations:', locationsError);
+  // Get all locations for these accounts in batches
+  let locations: any[] = [];
+  
+  for (let i = 0; i < accountIds.length; i += BATCH_SIZE) {
+    const batch = accountIds.slice(i, i + BATCH_SIZE);
+    const { data: batchLocations, error: locationsError } = await supabase
+      .from('locations')
+      .select('id, account_id, city, state, country, address_line1, zip_code, license_document_url, agreement_document_url, updated_at, pending_contract_sent')
+      .in('account_id', batch);
+
+    if (locationsError) {
+      console.error(`Error fetching locations batch ${i / BATCH_SIZE + 1}:`, locationsError);
+    } else {
+      locations = locations.concat(batchLocations || []);
+    }
   }
 
-  type LocationData = { 
-    id: string; 
-    account_id: string; 
-    city: string | null; 
-    state: string | null; 
-    country: string | null; 
-    address_line1: string | null; 
-    zip_code: string | null; 
-    license_document_url: string | null;
-  };
   const locationsData = (locations || []) as LocationData[];
 
-  // Get all agreements for locations in these accounts
+  // Get all agreements for these accounts
+  // Agreements can be linked by account_id OR location_id
   const locationIds = locationsData.map(loc => loc.id);
-  type AgreementData = { id: string; location_id: string; signed_date: string | null; status: string };
+  type AgreementData = { 
+    id: string; 
+    account_id: string; 
+    location_id: string | null; 
+    signed_date: string | null; 
+    start_date: string | null;
+    end_date: string | null;
+    created_at: string;
+    status: string;
+  };
+  
+  // Fetch agreements by account_id in batches
   let agreements: AgreementData[] = [];
   
-  if (locationIds.length > 0) {
-    const { data: agreementsData, error: agreementsError } = await supabase
-      .from('agreements')
-      .select('id, location_id, signed_date, status')
-      .in('location_id', locationIds)
-      .order('signed_date', { ascending: false });
+  if (accountIds.length > 0) {
+    for (let i = 0; i < accountIds.length; i += BATCH_SIZE) {
+      const batch = accountIds.slice(i, i + BATCH_SIZE);
+      const { data: batchAgreements, error: agreementsByAccountError } = await supabase
+        .from('agreements')
+        .select('id, account_id, location_id, signed_date, start_date, end_date, created_at, status')
+        .in('account_id', batch);
 
-    if (agreementsError) {
-      console.error('Error fetching agreements:', agreementsError);
-    } else {
-      agreements = (agreementsData || []) as AgreementData[];
+      if (agreementsByAccountError) {
+        console.error(`Error fetching agreements batch ${i / BATCH_SIZE + 1}:`, agreementsByAccountError);
+      } else {
+        agreements = agreements.concat((batchAgreements || []) as AgreementData[]);
+      }
     }
   }
 
@@ -178,44 +315,82 @@ export async function getPaginatedAccountsWithMetadata(
     locationsByAccount.get(loc.account_id)!.push(loc);
   });
 
-  // Group agreements by location_id, then by account_id
+  // Group agreements by location_id and by account_id
   const agreementsByLocation = new Map<string, AgreementData[]>();
-  agreements.forEach(agreement => {
-    if (!agreementsByLocation.has(agreement.location_id)) {
-      agreementsByLocation.set(agreement.location_id, []);
-    }
-    agreementsByLocation.get(agreement.location_id)!.push(agreement);
-  });
-
   const agreementsByAccount = new Map<string, AgreementData[]>();
-  locationsData.forEach(loc => {
-    const locAgreements = agreementsByLocation.get(loc.id) || [];
-    if (!agreementsByAccount.has(loc.account_id)) {
-      agreementsByAccount.set(loc.account_id, []);
+  
+  agreements.forEach(agreement => {
+    // Group by account_id (primary grouping)
+    if (!agreementsByAccount.has(agreement.account_id)) {
+      agreementsByAccount.set(agreement.account_id, []);
     }
-    agreementsByAccount.get(loc.account_id)!.push(...locAgreements);
+    agreementsByAccount.get(agreement.account_id)!.push(agreement);
+    
+    // Also group by location_id if it exists (for document status calculation)
+    if (agreement.location_id) {
+      if (!agreementsByLocation.has(agreement.location_id)) {
+        agreementsByLocation.set(agreement.location_id, []);
+      }
+      agreementsByLocation.get(agreement.location_id)!.push(agreement);
+    }
   });
+  
 
   // Build enriched accounts with metadata for ALL accounts
   const enrichedAccounts: AccountWithMetadata[] = accountsData.map(account => {
     const accountLocations = locationsByAccount.get(account.id) || [];
     const accountAgreements = agreementsByAccount.get(account.id) || [];
     
-    // Check for contracts
-    const hasContracts = accountAgreements.length > 0;
+    // Check for contracts: agreements table OR agreement_document_url on any location
+    const hasAgreementsInTable = accountAgreements.length > 0;
+    const hasAgreementDocuments = accountLocations.some(loc => {
+      const url = loc.agreement_document_url;
+      return url != null && typeof url === 'string' && url.trim().length > 0;
+    });
+    const hasContracts = hasAgreementsInTable || hasAgreementDocuments;
     
     // Check for licenses (any location has license_document_url)
-    const hasLicenses = accountLocations.some(loc => loc.license_document_url != null && loc.license_document_url.trim() !== '');
+    const hasLicenses = accountLocations.some(loc => {
+      const url = loc.license_document_url;
+      return url != null && typeof url === 'string' && url.trim().length > 0;
+    });
     
-      // Get most recent contract date
-      const signedAgreements = accountAgreements
-        .filter((ag): ag is AgreementData & { signed_date: string } => ag.signed_date !== null && ag.signed_date !== undefined)
-        .sort((a, b) => {
-          const dateA = new Date(a.signed_date).getTime();
-          const dateB = new Date(b.signed_date).getTime();
-          return dateB - dateA;
-        });
-      const mostRecentContractDate = signedAgreements.length > 0 ? signedAgreements[0].signed_date : null;
+      // Get most recent contract date from multiple sources:
+      // 1. Agreements with signed_date
+      // 2. Agreements with start_date (if no signed_date)
+      // 3. Agreements with end_date (if no signed_date or start_date)
+      // 4. Agreements with created_at (if no other date)
+      // 5. Locations with agreement_document_url (use updated_at when document was uploaded)
+      const contractDates: { date: string; source: string }[] = [];
+      
+      // Collect dates from agreements
+      accountAgreements.forEach(ag => {
+        if (ag.signed_date) {
+          contractDates.push({ date: ag.signed_date, source: 'signed_date' });
+        } else if (ag.start_date) {
+          contractDates.push({ date: ag.start_date, source: 'start_date' });
+        } else if (ag.end_date) {
+          contractDates.push({ date: ag.end_date, source: 'end_date' });
+        } else if (ag.created_at) {
+          contractDates.push({ date: ag.created_at, source: 'created_at' });
+        }
+      });
+      
+      // Collect dates from locations with agreement_document_url
+      accountLocations.forEach(loc => {
+        if (loc.agreement_document_url && loc.updated_at) {
+          contractDates.push({ date: loc.updated_at, source: 'location_updated_at' });
+        }
+      });
+      
+      // Sort by date (most recent first) and get the most recent
+      const mostRecentContractDate = contractDates.length > 0
+        ? contractDates.sort((a, b) => {
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            return dateB - dateA; // Most recent first
+          })[0].date
+        : null;
 
     // Collect unique cities, states, countries, addresses, zip codes
     const citySet = new Set<string>();
@@ -237,6 +412,37 @@ export async function getPaginatedAccountsWithMetadata(
       countrySet.add(account.udf_country_code);
     }
 
+    // Calculate document status (pass account agreements and pending contract status)
+    const documentStatus = calculateDocumentStatus(
+      accountLocations, 
+      agreementsByLocation, 
+      accountAgreements,
+      account.pending_contract_sent
+    );
+    
+    // Calculate pending contract count
+    // For single-location accounts: use account.pending_contract_sent (0 or 1)
+    // For multi-location accounts: count locations with pending_contract_sent = true
+    const isMultiLocation = account.account_type === 'multi_location' || accountLocations.length > 1;
+    let pendingContractCount = 0;
+    if (isMultiLocation) {
+      // Count locations with pending contracts
+      pendingContractCount = accountLocations.filter(loc => loc.pending_contract_sent).length;
+    } else {
+      // For single-location, use account-level pending_contract_sent
+      pendingContractCount = account.pending_contract_sent ? 1 : 0;
+    }
+    
+    // Debug: Log status calculation for Acorn Fertility specifically
+    if (account.name === 'Acorn Fertility' || account.name.toLowerCase().includes('acorn')) {
+      console.log(`[Status Calc] Account "${account.name}": status=${documentStatus}, locations=${accountLocations.length}, hasContracts=${hasContracts}, hasLicenses=${hasLicenses}`);
+      console.log(`[Status Calc] Account agreements: ${accountAgreements.length}, location agreements map size: ${agreementsByLocation.size}`);
+      accountLocations.forEach(loc => {
+        const locAgreements = agreementsByLocation.get(loc.id) || [];
+        console.log(`[Status Calc] Location "${loc.id}": agreement_doc_url=${loc.agreement_document_url ? 'yes' : 'no'}, license_doc_url=${loc.license_document_url ? 'yes' : 'no'}, agreements_in_table=${locAgreements.length}`);
+      });
+    }
+
     return {
       ...account,
       locationCount: accountLocations.length,
@@ -248,6 +454,8 @@ export async function getPaginatedAccountsWithMetadata(
       locationCountries: Array.from(countrySet),
       locationAddresses: Array.from(addressSet),
       locationZipCodes: Array.from(zipSet),
+      documentStatus,
+      pendingContractCount,
     };
   });
 
@@ -301,7 +509,7 @@ export async function getPaginatedAccountsWithMetadata(
     return false;
   };
 
-  // Apply all filters (country, contracts, licenses) on ALL accounts, not just the page
+  // Apply all filters on ALL accounts, not just the page
   let filteredAccounts = enrichedAccounts;
   
   // Apply country filter first
@@ -309,14 +517,44 @@ export async function getPaginatedAccountsWithMetadata(
     filteredAccounts = filteredAccounts.filter(acc => accountMatchesCountryFilter(acc, filters.country!));
   }
   
-  // Apply contract filter
-  if (filters?.hasContracts !== undefined) {
-    filteredAccounts = filteredAccounts.filter(acc => acc.hasContracts === filters.hasContracts);
-  }
-  
-  // Apply license filter
-  if (filters?.hasLicenses !== undefined) {
-    filteredAccounts = filteredAccounts.filter(acc => acc.hasLicenses === filters.hasLicenses);
+  // Filter by document status if requested
+  if (filters?.sortByStatus) {
+    const filterStatus = filters.sortByStatus;
+    const beforeCount = filteredAccounts.length;
+    const statusCounts = {
+      red: filteredAccounts.filter(acc => acc.documentStatus === 'red').length,
+      yellow: filteredAccounts.filter(acc => acc.documentStatus === 'yellow').length,
+      green: filteredAccounts.filter(acc => acc.documentStatus === 'green').length,
+    };
+    console.log(`[Status Filter] === FILTERING ===`);
+    console.log(`[Status Filter] Filter parameter received: "${filterStatus}" (type: ${typeof filterStatus})`);
+    console.log(`[Status Filter] Before filter: total=${beforeCount}, red=${statusCounts.red}, yellow=${statusCounts.yellow}, green=${statusCounts.green}`);
+    
+    // Verify a few accounts have the correct status before filtering
+    const sampleAccounts = filteredAccounts.slice(0, 5);
+    console.log(`[Status Filter] Sample accounts before filter:`);
+    sampleAccounts.forEach(acc => {
+      console.log(`  "${acc.name}": documentStatus="${acc.documentStatus}" (type: ${typeof acc.documentStatus})`);
+    });
+    
+    filteredAccounts = filteredAccounts.filter(acc => {
+      const matches = acc.documentStatus === filterStatus;
+      if (!matches && sampleAccounts.includes(acc)) {
+        console.log(`[Status Filter] Account "${acc.name}" filtered out: documentStatus="${acc.documentStatus}" !== filterStatus="${filterStatus}"`);
+      }
+      return matches;
+    });
+    
+    console.log(`[Status Filter] After filter: ${filteredAccounts.length} accounts with status="${filterStatus}"`);
+    if (filteredAccounts.length > 0) {
+      console.log(`[Status Filter] First 5 filtered accounts with their actual statuses:`);
+      filteredAccounts.slice(0, 5).forEach(acc => {
+        console.log(`  "${acc.name}": documentStatus="${acc.documentStatus}"`);
+      });
+    } else {
+      console.log(`[Status Filter] WARNING: No accounts found with status="${filterStatus}"`);
+    }
+    console.log(`[Status Filter] === END FILTERING ===`);
   }
 
   // Now paginate the filtered results
@@ -422,6 +660,7 @@ export async function createAccount(
           license_document_url: null,
           upload_batch_id: null,
           upload_list_name: null,
+          pending_contract_sent: false,
         };
 
         const location = await createLocation(locationData);
@@ -534,6 +773,7 @@ export async function updateAccount(
           license_document_url: null,
           upload_batch_id: null,
           upload_list_name: null,
+          pending_contract_sent: false,
         };
         const location = await createLocation(locationData);
         if (location) {

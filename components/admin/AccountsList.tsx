@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Account } from "@/lib/supabase/types";
@@ -18,6 +18,8 @@ interface AccountWithMetadata extends Account {
   locationCountries: string[];
   locationAddresses: string[];
   locationZipCodes: string[];
+  documentStatus: 'red' | 'yellow' | 'green';
+  pendingContractCount: number;
 }
 
 interface AccountsListProps {
@@ -25,9 +27,8 @@ interface AccountsListProps {
 }
 
 type CountryFilter = 'US' | 'CA' | 'UK' | 'INTL' | 'ALL';
-type ContractFilter = 'ALL' | 'HAS_CONTRACTS' | 'NO_CONTRACTS';
-type LicenseFilter = 'ALL' | 'HAS_LICENSES' | 'NO_LICENSES';
 type AccountTypeFilter = 'ALL' | 'SINGLE_LOCATION' | 'MULTI_LOCATION';
+type DocumentStatusSort = 'red' | 'yellow' | 'green' | 'none';
 
 // Helper function to normalize country codes for filtering
 function normalizeCountry(country: string | null | undefined): CountryFilter | null {
@@ -96,9 +97,8 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [countryFilter, setCountryFilter] = useState<CountryFilter>('ALL');
-  const [contractFilter, setContractFilter] = useState<ContractFilter>('ALL');
-  const [licenseFilter, setLicenseFilter] = useState<LicenseFilter>('ALL');
   const [accountTypeFilter, setAccountTypeFilter] = useState<AccountTypeFilter>('ALL');
+  const [documentStatusSort, setDocumentStatusSort] = useState<DocumentStatusSort>('none');
   const [accounts, setAccounts] = useState<AccountWithMetadata[]>(initialAccounts || []);
   const [loading, setLoading] = useState(!initialAccounts);
   const [page, setPage] = useState(1);
@@ -108,10 +108,17 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [showCsvUpload, setShowCsvUpload] = useState(false);
+  
+  // Use a ref to track the latest request to prevent race conditions
+  const requestIdRef = useRef(0);
 
   // Fetch accounts with pagination
-  const fetchAccounts = async (pageNum: number, search?: string, country?: CountryFilter, contracts?: ContractFilter, licenses?: LicenseFilter, accountType?: AccountTypeFilter) => {
+  const fetchAccounts = async (pageNum: number, search?: string, country?: CountryFilter, accountType?: AccountTypeFilter, sortByStatus?: DocumentStatusSort) => {
     setLoading(true);
+    
+    // Increment request ID to track this specific request
+    const currentRequestId = ++requestIdRef.current;
+    
     try {
       const params = new URLSearchParams({
         page: pageNum.toString(),
@@ -122,19 +129,6 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
         params.append('search', search);
       }
 
-      // Convert filters to API format
-      if (contracts === 'HAS_CONTRACTS') {
-        params.append('hasContracts', 'true');
-      } else if (contracts === 'NO_CONTRACTS') {
-        params.append('hasContracts', 'false');
-      }
-
-      if (licenses === 'HAS_LICENSES') {
-        params.append('hasLicenses', 'true');
-      } else       if (licenses === 'NO_LICENSES') {
-        params.append('hasLicenses', 'false');
-      }
-
       if (country && country !== 'ALL') {
         params.append('country', country);
       }
@@ -143,13 +137,38 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
         params.append('accountType', accountType);
       }
 
+      if (sortByStatus && sortByStatus !== 'none') {
+        params.append('sortByStatus', sortByStatus);
+      }
+
+      console.log(`[Frontend] Fetching accounts: requestId=${currentRequestId}, filter=${sortByStatus || 'none'}, page=${pageNum}`);
+
       const response = await fetch(`/api/admin/accounts?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch accounts');
       }
 
       const data = await response.json();
-      setAccounts(data.accounts || []);
+      const accountsData = data.accounts || [];
+      
+      // Only update state if this is still the latest request (prevents race conditions)
+      if (currentRequestId !== requestIdRef.current) {
+        console.log(`[Frontend] Ignoring stale response: requestId=${currentRequestId}, latest=${requestIdRef.current}`);
+        return;
+      }
+      
+      // Debug: Log what we received
+      const statusCounts = {
+        red: accountsData.filter((acc: AccountWithMetadata) => acc.documentStatus === 'red').length,
+        yellow: accountsData.filter((acc: AccountWithMetadata) => acc.documentStatus === 'yellow').length,
+        green: accountsData.filter((acc: AccountWithMetadata) => acc.documentStatus === 'green').length,
+      };
+      console.log(`[Frontend] Received ${accountsData.length} accounts: red=${statusCounts.red}, yellow=${statusCounts.yellow}, green=${statusCounts.green}, filter=${sortByStatus || 'none'}, requestId=${currentRequestId}`);
+      if (accountsData.length > 0) {
+        console.log(`[Frontend] First 3 accounts: ${accountsData.slice(0, 3).map((a: AccountWithMetadata) => `"${a.name}"(${a.documentStatus})`).join(', ')}`);
+      }
+      
+      setAccounts(accountsData);
       setTotal(data.total || 0);
       setTotalPages(data.totalPages || 0);
     } catch (error) {
@@ -160,26 +179,47 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
     }
   };
 
-  // Fetch accounts when filters or page change
-  useEffect(() => {
-    fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, contractFilter, licenseFilter, accountTypeFilter);
-  }, [page, searchQuery, countryFilter, contractFilter, licenseFilter, accountTypeFilter]);
+  // Use a ref to track the search debounce timer and previous search value
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const prevSearchQueryRef = useRef<string>("");
 
-  // Debounce search query
+  // Single effect to handle all filter changes with debouncing for search
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (page === 1) {
-        fetchAccounts(1, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, contractFilter, licenseFilter, accountTypeFilter);
-      } else {
-        setPage(1); // Reset to first page when search changes
+    const isSearchChange = prevSearchQueryRef.current !== searchQuery;
+    prevSearchQueryRef.current = searchQuery;
+
+    // If search changed, debounce it
+    if (isSearchChange) {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
       }
-    }, 300);
+      
+      searchTimeoutRef.current = setTimeout(() => {
+        if (page === 1) {
+          fetchAccounts(1, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, accountTypeFilter, documentStatusSort);
+        } else {
+          setPage(1); // Reset to first page when search changes
+        }
+        searchTimeoutRef.current = null;
+      }, 300);
+    } else {
+      // For non-search filter changes, fetch immediately (unless search is being debounced)
+      if (searchTimeoutRef.current) {
+        return; // Let the debounced search effect handle it
+      }
+      fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, accountTypeFilter, documentStatusSort);
+    }
 
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
+    };
+  }, [page, countryFilter, accountTypeFilter, documentStatusSort, searchQuery]);
 
   const handleEditSuccess = () => {
-    fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, contractFilter, licenseFilter, accountTypeFilter);
+    fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, accountTypeFilter, documentStatusSort);
     setEditingAccount(null);
   };
 
@@ -203,7 +243,7 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
       }
 
       // Refresh the current page
-      fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, contractFilter, licenseFilter, accountTypeFilter);
+      fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, accountTypeFilter, documentStatusSort);
     } catch (error: any) {
       console.error('Error deleting account:', error);
       alert(`Failed to delete account: ${error.message}`);
@@ -261,44 +301,31 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-navy-700">Contracts:</span>
+            <span className="text-sm font-medium text-navy-700">Sort by Status:</span>
             <div className="flex gap-2">
-              {(['ALL', 'HAS_CONTRACTS', 'NO_CONTRACTS'] as ContractFilter[]).map((filter) => (
+              {(['none', 'red', 'yellow', 'green'] as DocumentStatusSort[]).map((sort) => (
                 <button
-                  key={filter}
+                  key={sort}
                   onClick={() => {
-                    setContractFilter(filter);
+                    setDocumentStatusSort(sort);
                     setPage(1);
                   }}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    contractFilter === filter
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
+                    documentStatusSort === sort
                       ? 'bg-gold-600 text-white'
                       : 'bg-navy-100 text-navy-700 hover:bg-navy-200'
                   }`}
                 >
-                  {filter === 'HAS_CONTRACTS' ? 'Has Contracts' : filter === 'NO_CONTRACTS' ? 'No Contracts' : 'All'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-navy-700">Licenses:</span>
-            <div className="flex gap-2">
-              {(['ALL', 'HAS_LICENSES', 'NO_LICENSES'] as LicenseFilter[]).map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => {
-                    setLicenseFilter(filter);
-                    setPage(1);
-                  }}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    licenseFilter === filter
-                      ? 'bg-gold-600 text-white'
-                      : 'bg-navy-100 text-navy-700 hover:bg-navy-200'
-                  }`}
-                >
-                  {filter === 'HAS_LICENSES' ? 'Has Licenses' : filter === 'NO_LICENSES' ? 'No Licenses' : 'All'}
+                  {sort === 'none' ? 'None' : (
+                    <>
+                      <span className={`w-3 h-3 rounded-full ${
+                        sort === 'red' ? 'bg-red-500' :
+                        sort === 'yellow' ? 'bg-yellow-500' :
+                        'bg-green-500'
+                      }`}></span>
+                      {sort.charAt(0).toUpperCase() + sort.slice(1)}
+                    </>
+                  )}
                 </button>
               ))}
             </div>
@@ -355,6 +382,12 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
                     Account Name
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
+                    Most Recent Contract
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
+                    Contract Status
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
                     Address
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
@@ -371,9 +404,6 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
                     Primary Contact
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
-                    Most Recent Contract
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
                     Actions
@@ -407,6 +437,23 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
                     >
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
+                          {/* Document Status Indicator */}
+                          <div
+                            className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                              account.documentStatus === 'red'
+                                ? 'bg-red-500'
+                                : account.documentStatus === 'yellow'
+                                ? 'bg-yellow-500'
+                                : 'bg-green-500'
+                            }`}
+                            title={
+                              account.documentStatus === 'red'
+                                ? 'No contracts or licenses uploaded'
+                                : account.documentStatus === 'yellow'
+                                ? 'Some documents uploaded, but not all locations have both contract and license'
+                                : 'All locations have both contract and license uploaded'
+                            }
+                          />
                           <Link
                             href={`/admin/accounts/${account.id}`}
                             className="text-navy-900 font-medium hover:text-gold-600"
@@ -425,16 +472,35 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
                                   )}
                                 </span>
                               );
-                            } else {
-                              return (
-                                <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" />
-                                  Single Location
-                                </span>
-                              );
                             }
+                            return null;
                           })()}
                         </div>
+                      </td>
+                      <td className="py-3 px-4 text-sm text-navy-600">
+                        {account.mostRecentContractDate ? (
+                          new Date(account.mostRecentContractDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-sm">
+                        {account.pendingContractCount > 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                            <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                            {isMulti ? (
+                              `${account.pendingContractCount} of ${account.locationCount} Pending`
+                            ) : (
+                              'Contract Pending'
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-navy-400">—</span>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-sm text-navy-600">
                         {address || "—"}
@@ -453,17 +519,6 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
                       </td>
                       <td className="py-3 px-4 text-sm text-navy-600">
                         {account.primary_contact_name || account.primary_contact_email || "—"}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-navy-600">
-                        {account.mostRecentContractDate ? (
-                          new Date(account.mostRecentContractDate).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                          })
-                        ) : (
-                          "—"
-                        )}
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
@@ -589,7 +644,7 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
           onClose={() => setShowCsvUpload(false)}
           onSuccess={() => {
             setShowCsvUpload(false);
-            fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, contractFilter, licenseFilter, accountTypeFilter);
+            fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, accountTypeFilter, documentStatusSort);
           }}
         />
       )}

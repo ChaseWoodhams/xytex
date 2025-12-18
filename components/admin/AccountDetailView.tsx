@@ -51,6 +51,8 @@ export default function AccountDetailView({
   const [uploadLicenseError, setUploadLicenseError] = useState<string | null>(null);
   const licenseFileInputRef = useRef<HTMLInputElement>(null);
   const [viewingLicensePdf, setViewingLicensePdf] = useState<string | null>(null);
+  const [isUpdatingPendingContract, setIsUpdatingPendingContract] = useState(false);
+  const [accountPendingContract, setAccountPendingContract] = useState(account.pending_contract_sent);
   
   // Get the first location for single-location accounts
   const firstLocation = locations.length > 0 ? locations[0] : null;
@@ -80,6 +82,32 @@ export default function AccountDetailView({
       setTimeout(() => setActiveTab("overview"), 0);
     }
   }, [activeTab, isMultiLocation, locations.length]);
+
+  // Update account pending contract status
+  const handleTogglePendingContract = async (checked: boolean) => {
+    if (isMultiLocation) return; // Only for single-location accounts
+    
+    setIsUpdatingPendingContract(true);
+    try {
+      const response = await fetch(`/api/admin/accounts/${account.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pending_contract_sent: checked }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update pending contract status');
+      }
+
+      setAccountPendingContract(checked);
+      router.refresh();
+    } catch (error: any) {
+      console.error('Error updating pending contract status:', error);
+      alert(`Failed to update pending contract status: ${error.message}`);
+    } finally {
+      setIsUpdatingPendingContract(false);
+    }
+  };
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
@@ -409,6 +437,39 @@ export default function AccountDetailView({
               />
             )}
 
+
+            {/* Contract Status - Only for single location accounts */}
+            {!isMultiLocation && (
+              <div className="bg-white rounded-xl shadow-md p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-heading font-semibold text-navy-900">
+                        Contract Status
+                      </h2>
+                      <p className="text-sm text-navy-600 mt-1">
+                        Mark when a contract has been sent and is pending
+                      </p>
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={accountPendingContract}
+                      onChange={(e) => handleTogglePendingContract(e.target.checked)}
+                      disabled={isUpdatingPendingContract}
+                      className="w-5 h-5 text-gold-600 border-navy-300 rounded focus:ring-gold-500 focus:ring-2"
+                    />
+                    <span className={`text-sm font-medium ${accountPendingContract ? 'text-blue-700' : 'text-navy-600'}`}>
+                      {accountPendingContract ? 'Contract Sent (Pending)' : 'Mark Contract as Sent'}
+                    </span>
+                  </label>
+                </div>
+              </div>
+            )}
 
             {/* Contact Information - Combined Section - Only for single location accounts */}
             {!isMultiLocation && (account.primary_contact_name || account.primary_contact_email || account.primary_contact_phone || 

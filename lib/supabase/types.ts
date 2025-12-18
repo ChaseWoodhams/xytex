@@ -111,6 +111,7 @@ export interface Account {
   udf_country_code: string | null;
   upload_batch_id: string | null;
   upload_list_name: string | null;
+  pending_contract_sent: boolean;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -155,6 +156,7 @@ export interface Location {
   license_document_url: string | null;
   upload_batch_id: string | null;
   upload_list_name: string | null;
+  pending_contract_sent: boolean;
   created_at: string;
   updated_at: string;
 }

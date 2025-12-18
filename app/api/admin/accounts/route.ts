@@ -48,16 +48,10 @@ export async function GET(request: Request) {
       filters.search = searchParam;
     }
 
-    // Contract filter
-    const hasContractsParam = searchParams.get('hasContracts');
-    if (hasContractsParam !== null) {
-      filters.hasContracts = hasContractsParam === 'true';
-    }
-
-    // License filter
-    const hasLicensesParam = searchParams.get('hasLicenses');
-    if (hasLicensesParam !== null) {
-      filters.hasLicenses = hasLicensesParam === 'true';
+    // Sort by document status
+    const sortByStatusParam = searchParams.get('sortByStatus');
+    if (sortByStatusParam && ['red', 'yellow', 'green'].includes(sortByStatusParam)) {
+      filters.sortByStatus = sortByStatusParam as 'red' | 'yellow' | 'green';
     }
 
     // Country filter

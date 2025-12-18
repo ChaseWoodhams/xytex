@@ -2,35 +2,59 @@ import { createAdminClient } from './admin';
 import type { Activity, ActivityType } from './types';
 
 export async function getActivitiesByAccount(accountId: string): Promise<Activity[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('activities')
-    .select('*')
-    .eq('account_id', accountId)
-    .order('activity_date', { ascending: false });
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('activities')
+      .select('*')
+      .eq('account_id', accountId)
+      .order('activity_date', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching activities:', error);
-    throw error;
+    if (error) {
+      console.error('Error fetching activities:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+      // Return empty array instead of throwing to prevent page crashes
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error('Exception in getActivitiesByAccount:', err);
+    // Return empty array instead of throwing to prevent page crashes
+    return [];
   }
-
-  return data || [];
 }
 
 export async function getActivitiesByLocation(locationId: string): Promise<Activity[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from('activities')
-    .select('*')
-    .eq('location_id', locationId)
-    .order('activity_date', { ascending: false });
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('activities')
+      .select('*')
+      .eq('location_id', locationId)
+      .order('activity_date', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching activities:', error);
-    throw error;
+    if (error) {
+      console.error('Error fetching activities by location:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+      // Return empty array instead of throwing to prevent page crashes
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error('Exception in getActivitiesByLocation:', err);
+    // Return empty array instead of throwing to prevent page crashes
+    return [];
   }
-
-  return data || [];
 }
 
 export async function createActivity(
