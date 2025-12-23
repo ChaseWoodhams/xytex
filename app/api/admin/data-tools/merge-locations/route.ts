@@ -96,26 +96,26 @@ export async function POST(request: Request) {
 
     // Move all related data from source to target location
     // 1. Update agreements
-    await adminClient
-      .from('agreements')
+    await (adminClient
+      .from('agreements') as any)
       .update({ location_id: targetLocationId })
       .eq('location_id', sourceLocationId);
 
     // 2. Update activities
-    await adminClient
-      .from('activities')
+    await (adminClient
+      .from('activities') as any)
       .update({ location_id: targetLocationId })
       .eq('location_id', sourceLocationId);
 
     // 3. Update notes
-    await adminClient
-      .from('notes')
+    await (adminClient
+      .from('notes') as any)
       .update({ location_id: targetLocationId })
       .eq('location_id', sourceLocationId);
 
     // 4. Update location contacts
-    await adminClient
-      .from('location_contacts')
+    await (adminClient
+      .from('location_contacts') as any)
       .update({ location_id: targetLocationId })
       .eq('location_id', sourceLocationId);
 
