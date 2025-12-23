@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
-import { uploadLocationLicenseDocument, updateLocationLicenseDocumentUrl } from '@/lib/supabase/locations';
+import { uploadLocationLicenseDocument, updateLocationLicenseDocumentUrl, getLocationById } from '@/lib/supabase/locations';
 import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
 import { NextResponse } from 'next/server';
+import { logChange } from '@/lib/supabase/change-log';
 
 export async function POST(
   request: Request,
@@ -54,6 +55,9 @@ export async function POST(
 
     const documentUrl = uploadResult.url;
 
+    // Get location data for logging
+    const location = await getLocationById(id);
+    
     // Update the location with the document URL
     const updateResult = await updateLocationLicenseDocumentUrl(id, documentUrl);
 
@@ -63,6 +67,24 @@ export async function POST(
         { error: updateResult.error || 'Document uploaded but failed to update location record' },
         { status: 500 }
       );
+    }
+
+    // Log the change
+    if (location) {
+      await logChange({
+        actionType: 'upload_license',
+        entityType: 'location',
+        entityId: id,
+        entityName: location.name || 'Unknown Location',
+        description: `Uploaded license document for location "${location.name || 'Unknown'}"`,
+        details: {
+          locationId: id,
+          locationName: location.name,
+          fileName: file.name,
+          fileSize: file.size,
+          documentUrl,
+        },
+      });
     }
 
     return NextResponse.json({ 

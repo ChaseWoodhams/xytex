@@ -3,6 +3,7 @@ import { createAgreement } from '@/lib/supabase/agreements';
 import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
 import { NextResponse } from 'next/server';
+import { logChange } from '@/lib/supabase/change-log';
 
 export async function POST(request: Request) {
   try {
@@ -43,6 +44,22 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    // Log the change
+    await logChange({
+      actionType: 'create_agreement',
+      entityType: 'agreement',
+      entityId: agreement.id,
+      entityName: agreement.title,
+      description: `Created new ${agreement.agreement_type} agreement "${agreement.title}"`,
+      details: {
+        agreementId: agreement.id,
+        agreementTitle: agreement.title,
+        agreementType: agreement.agreement_type,
+        locationId: agreement.location_id,
+        status: agreement.status,
+      },
+    });
 
     return NextResponse.json(agreement, { status: 201 });
   } catch (error: unknown) {

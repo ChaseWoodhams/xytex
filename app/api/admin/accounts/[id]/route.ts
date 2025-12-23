@@ -7,6 +7,7 @@ import {
 import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
 import { NextResponse } from 'next/server';
+import { logChange, detectFieldChanges, formatChangedFields } from '@/lib/supabase/change-log';
 
 export async function GET(
   request: Request,
@@ -65,6 +66,10 @@ export async function PATCH(
     }
 
     const body = await request.json();
+    
+    // Get old account data to detect changes
+    const oldAccount = await getAccountById(id);
+    
     const account = await updateAccount(id, body);
 
     if (!account) {
@@ -73,6 +78,25 @@ export async function PATCH(
         { status: 500 }
       );
     }
+
+    // Log the change
+    const changedFields = detectFieldChanges(oldAccount, body);
+    const fieldsDescription = changedFields.length > 0 
+      ? formatChangedFields(changedFields)
+      : 'account information';
+    
+    await logChange({
+      actionType: 'update_account',
+      entityType: 'account',
+      entityId: id,
+      entityName: account.name,
+      description: `Updated ${fieldsDescription} for account "${account.name}"`,
+      details: {
+        changedFields,
+        accountId: id,
+        accountName: account.name,
+      },
+    });
 
     return NextResponse.json(account);
   } catch (error: any) {
@@ -104,6 +128,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Get account data before deletion for logging
+    const account = await getAccountById(id);
+    
     const success = await deleteAccount(id);
 
     if (!success) {
@@ -111,6 +138,22 @@ export async function DELETE(
         { error: 'Failed to delete account' },
         { status: 500 }
       );
+    }
+
+    // Log the change
+    if (account) {
+      await logChange({
+        actionType: 'delete_account',
+        entityType: 'account',
+        entityId: id,
+        entityName: account.name,
+        description: `Deleted account "${account.name}"`,
+        details: {
+          accountId: id,
+          accountName: account.name,
+          accountType: account.account_type,
+        },
+      });
     }
 
     return NextResponse.json({ success: true });

@@ -241,6 +241,20 @@ export interface Note {
   updated_at: string;
 }
 
+export interface ChangeLog {
+  id: string;
+  user_id: string;
+  user_name: string | null;
+  user_email: string;
+  action_type: string;
+  entity_type: string;
+  entity_id: string | null;
+  entity_name: string | null;
+  description: string;
+  details: Record<string, any> | null;
+  created_at: string;
+}
+
 // Database response types (with Supabase metadata)
 export interface Database {
   public: {
@@ -289,6 +303,11 @@ export interface Database {
         Row: Note;
         Insert: Omit<Note, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Note, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      change_log: {
+        Row: ChangeLog;
+        Insert: Omit<ChangeLog, 'id' | 'created_at'>;
+        Update: Partial<Omit<ChangeLog, 'id' | 'created_at'>>;
       };
     };
   };

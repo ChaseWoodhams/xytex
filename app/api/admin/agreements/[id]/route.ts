@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
-import { updateAgreement, deleteAgreement } from '@/lib/supabase/agreements';
+import { updateAgreement, deleteAgreement, getAgreementById } from '@/lib/supabase/agreements';
 import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
 import { NextResponse } from 'next/server';
+import { logChange, detectFieldChanges, formatChangedFields } from '@/lib/supabase/change-log';
 
 export async function PATCH(
   request: Request,
@@ -25,6 +26,10 @@ export async function PATCH(
     }
 
     const body = await request.json();
+    
+    // Get old agreement data to detect changes
+    const oldAgreement = await getAgreementById(id);
+    
     const agreement = await updateAgreement(id, body);
 
     if (!agreement) {
@@ -33,6 +38,27 @@ export async function PATCH(
         { status: 500 }
       );
     }
+
+    // Log the change
+    const changedFields = detectFieldChanges(oldAgreement, body);
+    const fieldsDescription = changedFields.length > 0 
+      ? formatChangedFields(changedFields)
+      : 'agreement information';
+    
+    await logChange({
+      actionType: 'update_agreement',
+      entityType: 'agreement',
+      entityId: id,
+      entityName: agreement.title,
+      description: `Updated ${fieldsDescription} for agreement "${agreement.title}"`,
+      details: {
+        changedFields,
+        agreementId: id,
+        agreementTitle: agreement.title,
+        agreementType: agreement.agreement_type,
+        locationId: agreement.location_id,
+      },
+    });
 
     return NextResponse.json(agreement);
   } catch (error: any) {
@@ -64,6 +90,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Get agreement data before deletion for logging
+    const agreement = await getAgreementById(id);
+    
     const success = await deleteAgreement(id);
 
     if (!success) {
@@ -71,6 +100,23 @@ export async function DELETE(
         { error: 'Failed to delete agreement' },
         { status: 500 }
       );
+    }
+
+    // Log the change
+    if (agreement) {
+      await logChange({
+        actionType: 'delete_agreement',
+        entityType: 'agreement',
+        entityId: id,
+        entityName: agreement.title,
+        description: `Deleted agreement "${agreement.title}"`,
+        details: {
+          agreementId: id,
+          agreementTitle: agreement.title,
+          agreementType: agreement.agreement_type,
+          locationId: agreement.location_id,
+        },
+      });
     }
 
     return NextResponse.json({ success: true });

@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
 import { NextResponse } from 'next/server';
+import { logChange } from '@/lib/supabase/change-log';
 
 export async function POST(request: Request) {
   try {
@@ -264,6 +265,24 @@ export async function POST(request: Request) {
       .from('notes')
       .select('id', { count: 'exact' })
       .eq('account_id', primaryAccount.id);
+
+    // Log the change
+    await logChange({
+      actionType: 'merge_accounts',
+      entityType: 'account',
+      entityId: primaryAccount.id,
+      entityName: primaryAccount.name,
+      description: `Merged ${accounts.length} accounts into multi-location account "${primaryAccount.name}"`,
+      details: {
+        accountsMerged: accounts.length,
+        locationCount: finalLocations?.length || 0,
+        agreementsCount: finalAgreements?.length || 0,
+        activitiesCount: finalActivities?.length || 0,
+        notesCount: finalNotes?.length || 0,
+        mergedAccountIds: accountIds,
+        mergedAccountName: primaryAccount.name,
+      },
+    });
 
     return NextResponse.json({
       success: true,

@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
-import { uploadAgreementDocument } from '@/lib/supabase/agreements';
+import { uploadAgreementDocument, getAgreementById } from '@/lib/supabase/agreements';
 import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
 import { NextResponse } from 'next/server';
+import { logChange } from '@/lib/supabase/change-log';
 
 export async function POST(
   request: Request,
@@ -34,6 +35,9 @@ export async function POST(
       );
     }
 
+    // Get agreement data for logging
+    const agreement = await getAgreementById(id);
+    
     const documentUrl = await uploadAgreementDocument(file, id, file.name);
 
     if (!documentUrl) {
@@ -41,6 +45,24 @@ export async function POST(
         { error: 'Failed to upload document' },
         { status: 500 }
       );
+    }
+
+    // Log the change
+    if (agreement) {
+      await logChange({
+        actionType: 'upload_contract',
+        entityType: 'agreement',
+        entityId: id,
+        entityName: agreement.title,
+        description: `Uploaded contract document for agreement "${agreement.title}"`,
+        details: {
+          agreementId: id,
+          agreementTitle: agreement.title,
+          fileName: file.name,
+          fileSize: file.size,
+          documentUrl,
+        },
+      });
     }
 
     return NextResponse.json({ document_url: documentUrl });

@@ -4,6 +4,7 @@ import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
 import { NextResponse } from 'next/server';
 import { getLocationById } from '@/lib/supabase/locations';
+import { logChange } from '@/lib/supabase/change-log';
 
 export async function POST(request: Request) {
   try {
@@ -148,6 +149,21 @@ export async function POST(request: Request) {
         .update({ account_type: 'single_location' })
         .eq('id', sourceLocation.account_id);
     }
+
+    // Log the change
+    await logChange({
+      actionType: 'merge_locations',
+      entityType: 'location',
+      entityId: targetLocationId,
+      entityName: targetLocation.name || 'Unknown Location',
+      description: `Merged location "${sourceLocation.name || 'Unknown'}" into "${targetLocation.name || 'Unknown'}"`,
+      details: {
+        sourceLocationId: sourceLocationId,
+        sourceLocationName: sourceLocation.name,
+        targetLocationId: targetLocationId,
+        targetLocationName: targetLocation.name,
+      },
+    });
 
     return NextResponse.json({
       success: true,

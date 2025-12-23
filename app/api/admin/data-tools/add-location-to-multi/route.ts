@@ -5,6 +5,7 @@ import { getCurrentUser } from '@/lib/supabase/users';
 import { NextResponse } from 'next/server';
 import { getLocationById, getLocationsByAccount } from '@/lib/supabase/locations';
 import { getAccountById, updateAccount } from '@/lib/supabase/accounts';
+import { logChange } from '@/lib/supabase/change-log';
 
 export async function POST(request: Request) {
   try {
@@ -69,8 +70,8 @@ export async function POST(request: Request) {
     }
 
     // Move the location to the target account
-    const { error: updateError } = await adminClient
-      .from('locations')
+    const { error: updateError } = await (adminClient
+      .from('locations') as any)
       .update({ account_id: targetAccountId })
       .eq('id', locationId);
 
@@ -95,6 +96,24 @@ export async function POST(request: Request) {
 
     // Get updated location count
     const targetLocations = await getLocationsByAccount(targetAccountId);
+
+    // Log the change
+    await logChange({
+      actionType: 'add_location',
+      entityType: 'location',
+      entityId: locationId,
+      entityName: location.name || 'Unknown Location',
+      description: `Added location "${location.name || 'Unknown'}" to multi-location account "${targetAccount.name}"`,
+      details: {
+        locationId: locationId,
+        locationName: location.name,
+        sourceAccountId: sourceAccount.id,
+        sourceAccountName: sourceAccount.name,
+        targetAccountId: targetAccountId,
+        targetAccountName: targetAccount.name,
+        locationCount: targetLocations.length,
+      },
+    });
 
     return NextResponse.json({
       success: true,

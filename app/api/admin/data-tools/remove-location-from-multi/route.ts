@@ -5,6 +5,7 @@ import { getCurrentUser } from '@/lib/supabase/users';
 import { NextResponse } from 'next/server';
 import { getLocationById, getLocationsByAccount, createLocation } from '@/lib/supabase/locations';
 import { getAccountById, createAccount, updateAccount } from '@/lib/supabase/accounts';
+import { logChange } from '@/lib/supabase/change-log';
 
 export async function POST(request: Request) {
   try {
@@ -128,6 +129,23 @@ export async function POST(request: Request) {
         account_type: 'single_location',
       });
     }
+
+    // Log the change
+    await logChange({
+      actionType: 'remove_location',
+      entityType: 'location',
+      entityId: locationId,
+      entityName: location.name || 'Unknown Location',
+      description: `Removed location "${location.name || 'Unknown'}" from multi-location account "${sourceAccount.name}" and created new single-location account "${newAccount.name}"`,
+      details: {
+        locationId: locationId,
+        locationName: location.name,
+        sourceAccountId: sourceAccount.id,
+        sourceAccountName: sourceAccount.name,
+        newAccountId: newAccount.id,
+        accountName: newAccount.name,
+      },
+    });
 
     return NextResponse.json({
       success: true,

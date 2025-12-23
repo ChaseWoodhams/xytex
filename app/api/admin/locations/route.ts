@@ -3,6 +3,7 @@ import { createLocation } from '@/lib/supabase/locations';
 import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
 import { NextResponse } from 'next/server';
+import { logChange } from '@/lib/supabase/change-log';
 
 export async function POST(request: Request) {
   try {
@@ -29,6 +30,21 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    // Log the change
+    await logChange({
+      actionType: 'create_location',
+      entityType: 'location',
+      entityId: location.id,
+      entityName: location.name || 'Unknown Location',
+      description: `Created new location "${location.name || 'Unknown'}"`,
+      details: {
+        locationId: location.id,
+        locationName: location.name,
+        accountId: location.account_id,
+        clinicCode: location.clinic_code,
+      },
+    });
 
     return NextResponse.json(location, { status: 201 });
   } catch (error: any) {

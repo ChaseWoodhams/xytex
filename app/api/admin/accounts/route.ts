@@ -4,6 +4,7 @@ import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
 import { NextResponse } from 'next/server';
 import type { AccountStatus } from '@/lib/supabase/types';
+import { logChange } from '@/lib/supabase/change-log';
 
 export async function GET(request: Request) {
   try {
@@ -124,6 +125,21 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    // Log the change
+    await logChange({
+      actionType: 'create_account',
+      entityType: 'account',
+      entityId: account.id,
+      entityName: account.name,
+      description: `Created new ${account.account_type === 'single_location' ? 'single-location' : 'multi-location'} account "${account.name}"`,
+      details: {
+        accountId: account.id,
+        accountName: account.name,
+        accountType: account.account_type,
+        industry: account.industry,
+      },
+    });
 
     return NextResponse.json(account, { status: 201 });
   } catch (error: any) {
