@@ -59,8 +59,8 @@ export async function logChange(params: CreateChangeLogParams): Promise<void> {
       details: params.details || null,
     };
 
-    const { error } = await adminClient
-      .from('change_log')
+    const { error } = await (adminClient
+      .from('change_log') as any)
       .insert(changeLogData);
 
     if (error) {
