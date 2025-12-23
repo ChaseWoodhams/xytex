@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Location, Agreement, LocationUpload } from "@/lib/supabase/types";
-import { MapPin, Plus, Edit, Trash2, Upload, FileSpreadsheet } from "lucide-react";
+import { MapPin, Plus, Edit, Trash2, Upload, FileSpreadsheet, Minus } from "lucide-react";
 import LocationForm from "./LocationForm";
 import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
 import LocationCsvUpload from "./LocationCsvUpload";
@@ -15,13 +15,16 @@ interface LocationsListProps {
   accountId: string;
   locations: Location[];
   locationAgreementsMap: Map<string, Agreement[]>;
+  isMultiLocation?: boolean;
 }
 
-export default function LocationsList({ accountId, locations, locationAgreementsMap }: LocationsListProps) {
+export default function LocationsList({ accountId, locations, locationAgreementsMap, isMultiLocation = false }: LocationsListProps) {
   const [showForm, setShowForm] = useState(false);
   const [showCsvUpload, setShowCsvUpload] = useState(false);
   const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [removeLocationId, setRemoveLocationId] = useState<string | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
   const [uploads, setUploads] = useState<LocationUpload[]>([]);
   const [updatingPendingContract, setUpdatingPendingContract] = useState<Set<string>>(new Set());
   const [locationPendingContract, setLocationPendingContract] = useState<Map<string, boolean>>(
@@ -59,6 +62,33 @@ export default function LocationsList({ accountId, locations, locationAgreements
       }
     } catch (error) {
       console.error('Error fetching uploads:', error);
+    }
+  };
+
+  // Remove location from multi-location account
+  const handleRemoveLocation = async (locationId: string) => {
+    setIsRemoving(true);
+    try {
+      const response = await fetch('/api/admin/data-tools/remove-location-from-multi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locationId }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to remove location');
+      }
+
+      const data = await response.json();
+      alert(`Successfully created new single-location account "${data.accountName}" with the removed location.`);
+      router.refresh();
+    } catch (error: any) {
+      console.error('Error removing location:', error);
+      alert(`Failed to remove location: ${error.message}`);
+    } finally {
+      setIsRemoving(false);
+      setRemoveLocationId(null);
     }
   };
 
@@ -278,15 +308,34 @@ export default function LocationsList({ accountId, locations, locationAgreements
                         href={`/admin/locations/${location.id}`}
                         className="p-2 text-navy-600 hover:text-gold-600 hover:bg-gold-50 rounded-lg transition-colors"
                         onClick={(e) => e.stopPropagation()}
+                        title="Edit location"
                       >
                         <Edit className="w-4 h-4" />
                       </Link>
+                      {isMultiLocation && locations.length > 1 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRemoveLocationId(location.id);
+                          }}
+                          disabled={isRemoving}
+                          className="p-2 text-navy-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50"
+                          title="Remove from account (creates new single-location account)"
+                        >
+                          {isRemoving && removeLocationId === location.id ? (
+                            <div className="w-4 h-4 border-2 border-orange-600 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Minus className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setDeleteLocationId(location.id);
                         }}
                         className="p-2 text-navy-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete location permanently"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -341,6 +390,22 @@ export default function LocationsList({ accountId, locations, locationAgreements
           message="Are you sure you want to delete this location? This will also delete all associated agreements."
           itemName={locations.find(l => l.id === deleteLocationId)?.name || 'this location'}
           isLoading={isDeleting}
+        />
+      )}
+
+      {removeLocationId && (
+        <DeleteConfirmationDialog
+          isOpen={!!removeLocationId}
+          onClose={() => setRemoveLocationId(null)}
+          onConfirm={async () => {
+            await handleRemoveLocation(removeLocationId);
+          }}
+          title="Remove Location from Multi-Location Account"
+          message="This will remove the location from this multi-location account and create a new single-location account with this location. The location and all its data will be preserved."
+          itemName={locations.find(l => l.id === removeLocationId)?.name || 'this location'}
+          isLoading={isRemoving}
+          confirmText="Remove from Account"
+          itemLabel="Location to remove from multi-location account:"
         />
       )}
       </div>

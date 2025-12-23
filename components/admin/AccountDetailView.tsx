@@ -835,6 +835,7 @@ export default function AccountDetailView({
             accountId={account.id}
             locations={locations}
             locationAgreementsMap={locationAgreementsMap}
+            isMultiLocation={isMultiLocation}
           />
         )}
 

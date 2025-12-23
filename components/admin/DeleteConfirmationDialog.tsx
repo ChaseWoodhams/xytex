@@ -12,6 +12,7 @@ interface DeleteConfirmationDialogProps {
   itemName: string;
   isLoading?: boolean;
   confirmText?: string;
+  itemLabel?: string;
 }
 
 export default function DeleteConfirmationDialog({
@@ -23,6 +24,7 @@ export default function DeleteConfirmationDialog({
   itemName,
   isLoading = false,
   confirmText = "Delete",
+  itemLabel,
 }: DeleteConfirmationDialogProps) {
   if (!isOpen) return null;
 
@@ -55,7 +57,9 @@ export default function DeleteConfirmationDialog({
               <div className="text-navy-700 mb-3">{message}</div>
             )}
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
-              <p className="text-xs text-red-600 uppercase tracking-wide mb-1">Item to {confirmText.toLowerCase()}:</p>
+              <p className="text-xs text-red-600 uppercase tracking-wide mb-1">
+                {itemLabel || `Item to ${confirmText.toLowerCase()}:`}
+              </p>
               <p className="text-sm font-medium text-navy-900">{itemName}</p>
             </div>
             <div className="bg-red-100 border border-red-300 rounded-lg p-3">

@@ -3,6 +3,7 @@ import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
 import { redirect } from 'next/navigation';
 import AccountMergeTool from '@/components/admin/AccountMergeTool';
+import LocationManagementTool from '@/components/admin/LocationManagementTool';
 
 export default async function DataToolsPage() {
   const supabase = await createClient();
@@ -33,6 +34,7 @@ export default async function DataToolsPage() {
 
         <div className="space-y-6">
           <AccountMergeTool />
+          <LocationManagementTool />
         </div>
       </div>
     </div>
