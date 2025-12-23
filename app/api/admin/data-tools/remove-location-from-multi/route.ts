@@ -77,6 +77,7 @@ export async function POST(request: Request) {
       primary_contact_phone: location.phone || sourceAccount.primary_contact_phone,
       notes: location.notes || sourceAccount.notes,
       sage_code: null, // New account gets new sage code
+      udf_clinic_code: null, // New account gets new clinic code
       udf_clinic_name: location.name || null,
       udf_shipto_name: null,
       udf_address_line1: location.address_line1 || null,
