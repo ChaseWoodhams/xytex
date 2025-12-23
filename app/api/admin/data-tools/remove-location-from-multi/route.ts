@@ -104,8 +104,8 @@ export async function POST(request: Request) {
     }
 
     // Move the location to the new account
-    const { error: updateError } = await adminClient
-      .from('locations')
+    const { error: updateError } = await (adminClient
+      .from('locations') as any)
       .update({ 
         account_id: newAccount.id,
         is_primary: true, // Single location is always primary

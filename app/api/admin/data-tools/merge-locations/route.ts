@@ -81,8 +81,8 @@ export async function POST(request: Request) {
     };
 
     // Update target location with merged data
-    const { error: updateError } = await adminClient
-      .from('locations')
+    const { error: updateError } = await (adminClient
+      .from('locations') as any)
       .update(mergedData)
       .eq('id', targetLocationId);
 
