@@ -61,12 +61,12 @@ export default function AccountDetailView({
   // Determine if this is a multi-location account based on account_type or actual location count
   const isMultiLocation = account.account_type === 'multi_location' || locations.length > 1;
   
-  // Only show locations tab if it's a multi-location account and there are multiple locations
+  // Show locations tab if it's a multi-location account (even if no locations yet, so users can add first location)
   // Only show agreements and license tabs if it's a single-location account (for multi-location accounts, these are on location pages)
   type TabId = "overview" | "locations" | "agreements" | "activities" | "notes" | "license";
   const tabs: Array<{ id: TabId; label: string; icon: typeof Building2 }> = [
     { id: "overview", label: "Overview", icon: Building2 },
-    ...(isMultiLocation && locations.length > 1 ? [{ id: "locations" as TabId, label: "Locations", icon: MapPin }] : []),
+    ...(isMultiLocation ? [{ id: "locations" as TabId, label: "Locations", icon: MapPin }] : []),
     ...(!isMultiLocation || locations.length <= 1 ? [{ id: "agreements" as TabId, label: "Agreements", icon: FileText }] : []),
     ...(!isMultiLocation || locations.length <= 1 ? [{ id: "license" as TabId, label: "License", icon: Shield }] : []),
     { id: "activities", label: "Activities", icon: Clock },
@@ -78,7 +78,7 @@ export default function AccountDetailView({
     if (activeTab === "locations" && !isMultiLocation) {
       setTimeout(() => setActiveTab("overview"), 0);
     }
-    if ((activeTab === "agreements" || activeTab === "license" || activeTab === "activities" || activeTab === "notes") && isMultiLocation && locations.length > 1) {
+    if ((activeTab === "agreements" || activeTab === "license") && isMultiLocation && locations.length > 1) {
       setTimeout(() => setActiveTab("overview"), 0);
     }
   }, [activeTab, isMultiLocation, locations.length]);
