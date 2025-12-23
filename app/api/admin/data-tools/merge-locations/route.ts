@@ -144,8 +144,8 @@ export async function POST(request: Request) {
         .eq('id', sourceLocation.account_id);
     } else if (remainingLocations.length === 1) {
       // Convert to single-location account
-      await adminClient
-        .from('accounts')
+      await (adminClient
+        .from('accounts') as any)
         .update({ account_type: 'single_location' })
         .eq('id', sourceLocation.account_id);
     }
