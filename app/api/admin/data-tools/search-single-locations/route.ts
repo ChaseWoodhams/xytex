@@ -63,7 +63,7 @@ export async function GET(request: Request) {
     }
 
     // Get locations for matching accounts
-    const accountIds = (accounts || []).map(acc => acc.id);
+    const accountIds = ((accounts || []) as Array<{ id: string; name: string; account_type: string }>).map(acc => acc.id);
     let accountLocations: any[] = [];
 
     if (accountIds.length > 0) {
