@@ -251,8 +251,9 @@ export async function updateCarePackageShipment(
       ? (materials ?? 0) + (shipping ?? 0)
       : updates.total_cost;
 
-  const { data, error } = await supabase
-    .from('care_package_shipments')
+  const { data, error } = await (supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .from('care_package_shipments') as any)
     .update({
       status: updates.status,
       sent_at: updates.sent_at,
