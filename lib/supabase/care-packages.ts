@@ -3,6 +3,7 @@ import type {
   CarePackageRequest,
   CarePackageShipment,
   CarePackageStatus,
+  Database,
 } from './types';
 
 export interface NewCarePackageShipmentInput {
@@ -56,15 +57,17 @@ export async function createCarePackageRequest(
   }
 
   // Insert request
+  const insertData: Database['public']['Tables']['care_package_requests']['Insert'] = {
+    account_id: input.account_id ?? null,
+    location_id: input.location_id ?? null,
+    requested_by: input.requested_by,
+    notes: input.notes ?? null,
+    priority: input.priority ?? null,
+  };
+  
   const { data: request, error: requestError } = await supabase
     .from('care_package_requests')
-    .insert({
-      account_id: input.account_id ?? null,
-      location_id: input.location_id ?? null,
-      requested_by: input.requested_by,
-      notes: input.notes ?? null,
-      priority: input.priority ?? null,
-    })
+    .insert(insertData)
     .select('*')
     .single();
 
