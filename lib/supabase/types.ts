@@ -255,6 +255,41 @@ export interface ChangeLog {
   created_at: string;
 }
 
+export type CarePackageStatus = 'requested' | 'in_progress' | 'sent' | 'cancelled';
+
+export interface CarePackageRequest {
+  id: string;
+  account_id: string | null;
+  location_id: string | null;
+  requested_by: string;
+  requested_at: string;
+  notes: string | null;
+  priority: string | null;
+  created_at: string;
+}
+
+export interface CarePackageShipment {
+  id: string;
+  request_id: string;
+  account_id: string | null;
+  location_id: string | null;
+  label: string | null;
+  recipient_name: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
+  country: string | null;
+  quantity: number;
+  status: CarePackageStatus;
+  sent_at: string | null;
+  materials_cost: number | null;
+  shipping_cost: number | null;
+  total_cost: number | null;
+  created_at: string;
+}
+
 // Database response types (with Supabase metadata)
 export interface Database {
   public: {
@@ -308,6 +343,16 @@ export interface Database {
         Row: ChangeLog;
         Insert: Omit<ChangeLog, 'id' | 'created_at'>;
         Update: Partial<Omit<ChangeLog, 'id' | 'created_at'>>;
+      };
+      care_package_requests: {
+        Row: CarePackageRequest;
+        Insert: Omit<CarePackageRequest, 'id' | 'created_at' | 'requested_at'>;
+        Update: Partial<Omit<CarePackageRequest, 'id' | 'created_at' | 'requested_at'>>;
+      };
+      care_package_shipments: {
+        Row: CarePackageShipment;
+        Insert: Omit<CarePackageShipment, 'id' | 'created_at' | 'total_cost'>;
+        Update: Partial<Omit<CarePackageShipment, 'id' | 'created_at' | 'request_id'>>;
       };
     };
   };

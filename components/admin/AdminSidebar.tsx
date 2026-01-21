@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { Building2, LogOut, User, UserPlus, Wrench, Menu, X } from "lucide-react";
+import { Building2, LogOut, User, Menu, X, Megaphone, Stethoscope } from "lucide-react";
 
 interface AdminSidebarProps {
   isOpen?: boolean;
@@ -70,40 +70,31 @@ export default function AdminSidebar({ isOpen: controlledIsOpen, onClose }: Admi
           </div>
           <nav className="space-y-2">
             <Link
-              href="/admin/accounts"
+              href="/admin/clinic-tools"
               onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                pathname?.startsWith("/admin/accounts")
-                  ? "bg-gold-600 text-white"
-                  : "hover:bg-navy-800"
-              }`}
-            >
-              <Building2 className="w-5 h-5" />
-              <span>Accounts</span>
-            </Link>
-            <Link
-              href="/admin/invitations"
-              onClick={handleLinkClick}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                pathname?.startsWith("/admin/invitations")
-                  ? "bg-gold-600 text-white"
-                  : "hover:bg-navy-800"
-              }`}
-            >
-              <UserPlus className="w-5 h-5" />
-              <span>Invitations</span>
-            </Link>
-            <Link
-              href="/admin/data-tools"
-              onClick={handleLinkClick}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                pathname?.startsWith("/admin/clinic-tools") || 
+                pathname?.startsWith("/admin/accounts") || 
+                pathname?.startsWith("/admin/invitations") || 
                 pathname?.startsWith("/admin/data-tools")
                   ? "bg-gold-600 text-white"
                   : "hover:bg-navy-800"
               }`}
             >
-              <Wrench className="w-5 h-5" />
-              <span>Data Tools</span>
+              <Stethoscope className="w-5 h-5" />
+              <span>Clinic Tools</span>
+            </Link>
+            <Link
+              href="/admin/marketing-tools"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                pathname?.startsWith("/admin/marketing-tools")
+                  ? "bg-gold-600 text-white"
+                  : "hover:bg-navy-800"
+              }`}
+            >
+              <Megaphone className="w-5 h-5" />
+              <span>Marketing Tools</span>
             </Link>
           </nav>
         </div>
