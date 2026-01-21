@@ -57,17 +57,16 @@ export async function createCarePackageRequest(
   }
 
   // Insert request
-  const insertData: Database['public']['Tables']['care_package_requests']['Insert'] = {
-    account_id: input.account_id ?? null,
-    location_id: input.location_id ?? null,
-    requested_by: input.requested_by,
-    notes: input.notes ?? null,
-    priority: input.priority ?? null,
-  };
-  
-  const { data: request, error: requestError } = await supabase
-    .from('care_package_requests')
-    .insert(insertData)
+  const { data: request, error: requestError } = await (supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .from('care_package_requests') as any)
+    .insert({
+      account_id: input.account_id ?? null,
+      location_id: input.location_id ?? null,
+      requested_by: input.requested_by,
+      notes: input.notes ?? null,
+      priority: input.priority ?? null,
+    })
     .select('*')
     .single();
 
@@ -97,8 +96,9 @@ export async function createCarePackageRequest(
     total_cost: null,
   }));
 
-  const { data: shipments, error: shipmentsError } = await supabase
-    .from('care_package_shipments')
+  const { data: shipments, error: shipmentsError } = await (supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .from('care_package_shipments') as any)
     .insert(shipmentsToInsert)
     .select('*');
 
