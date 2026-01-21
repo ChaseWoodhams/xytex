@@ -51,7 +51,10 @@ export async function getAccounts(
   }
 
   if (filters?.search) {
-    query = query.or(`name.ilike.%${filters.search}%,primary_contact_name.ilike.%${filters.search}%,primary_contact_email.ilike.%${filters.search}%`);
+    const search = filters.search;
+    query = query.or(
+      `name.ilike.%${search}%,primary_contact_name.ilike.%${search}%,primary_contact_email.ilike.%${search}%,sage_code.ilike.%${search}%`
+    );
   }
 
   query = query.order('created_at', { ascending: false });
@@ -224,7 +227,10 @@ export async function getPaginatedAccountsWithMetadata(
   }
 
   if (filters?.search) {
-    baseQuery = baseQuery.or(`name.ilike.%${filters.search}%,primary_contact_name.ilike.%${filters.search}%,primary_contact_email.ilike.%${filters.search}%`);
+    const search = filters.search;
+    baseQuery = baseQuery.or(
+      `name.ilike.%${search}%,primary_contact_name.ilike.%${search}%,primary_contact_email.ilike.%${search}%,sage_code.ilike.%${search}%`
+    );
   }
 
   // Order by created_at (descending) - we'll paginate after filtering
