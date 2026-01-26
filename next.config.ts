@@ -28,9 +28,9 @@ const nextConfig: NextConfig = {
     // Empty config to silence the warning
     // The dynamic import in pdf-extract.ts handles the pdf-parse module loading
   },
-  // Mark pdf-parse, pdfjs-dist, and pdf2json as external to prevent bundling issues
+  // Mark pdf-parse, pdfjs-dist, pdf2json, and puppeteer as external to prevent bundling issues
   // In Next.js 16, this moved from experimental.serverComponentsExternalPackages to serverExternalPackages
-  serverExternalPackages: ['pdf-parse', 'pdfjs-dist', 'pdf2json'],
+  serverExternalPackages: ['pdf-parse', 'pdfjs-dist', 'pdf2json', 'puppeteer', 'puppeteer-core'],
 };
 
 export default nextConfig;

@@ -196,6 +196,11 @@ export default function LocationsList({ accountId, locations, locationAgreements
                           Primary
                         </span>
                       )}
+                      {location.total_vials_sold > 0 && (
+                        <span className="px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full">
+                          {location.total_vials_sold} Vial{location.total_vials_sold !== 1 ? 's' : ''}
+                        </span>
+                      )}
                       <span
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${
                           location.status === "active"

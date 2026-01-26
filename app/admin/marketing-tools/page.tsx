@@ -1,8 +1,9 @@
+import { Suspense } from "react";
 import { createClient } from '@/lib/supabase/server';
 import { canAccessAdmin } from '@/lib/utils/roles';
 import { getCurrentUser } from '@/lib/supabase/users';
 import { redirect } from 'next/navigation';
-import CarePackageDashboard from '@/components/admin/Marketing/CarePackageDashboard';
+import MarketingToolsClient from "@/components/admin/Marketing/MarketingToolsClient";
 
 export default async function MarketingToolsPage() {
   const supabase = await createClient();
@@ -20,10 +21,8 @@ export default async function MarketingToolsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="max-w-7xl mx-auto">
-        <CarePackageDashboard />
-      </div>
-    </div>
+    <Suspense fallback={<div className="p-8"><div className="text-navy-600">Loading...</div></div>}>
+      <MarketingToolsClient />
+    </Suspense>
   );
 }

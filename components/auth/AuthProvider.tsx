@@ -62,16 +62,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           timeoutId = setTimeout(() => reject(timeoutError), TIMEOUT_MS);
         });
 
-        // Race the query against the timeout
-        // Type the query result explicitly using the actual Supabase response type
-        const queryPromise = Promise.resolve(profileQuery) as Promise<{ data: User | null; error: { message: string; code?: string; details?: string; hint?: string } | null }>;
-        const result = await Promise.race([
-          queryPromise.then((r) => {
+        // Execute the query directly - Supabase query builders are promises
+        // Type assertion needed due to Promise.race typing issue
+        const result = (await Promise.race([
+          profileQuery.then((r) => {
             if (timeoutId) clearTimeout(timeoutId);
             return r;
           }),
           timeoutPromise,
-        ]);
+        ])) as { data: User | null; error: any } | { data: null; error: Error };
 
         if (result.error) {
           // If it's a "not found" error and we haven't retried, try once more
@@ -81,12 +80,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await new Promise(resolve => setTimeout(resolve, 1000));
             return fetchUserProfile(authUser, retryCount + 1);
           }
-          console.error('Error fetching user profile:', {
-            message: result.error.message,
-            code: result.error.code,
-            details: result.error.details,
-            hint: result.error.hint
-          });
+          // Log error with proper structure - access properties directly
+          const error = result.error as any;
+          const errorInfo: Record<string, any> = {};
+          
+          // Directly access properties we know exist from logs
+          if (error) {
+            if (typeof error === 'object') {
+              // Access properties directly
+              if ('message' in error) errorInfo.message = error.message;
+              if ('code' in error) errorInfo.code = error.code;
+              if ('details' in error) errorInfo.details = error.details;
+              if ('hint' in error) errorInfo.hint = error.hint;
+              
+              // Try to get all enumerable properties
+              try {
+                for (const key in error) {
+                  if (error.hasOwnProperty(key) && !errorInfo.hasOwnProperty(key)) {
+                    errorInfo[key] = error[key];
+                  }
+                }
+              } catch (e) {
+                // Fallback: stringify the error
+                errorInfo.errorString = String(error);
+              }
+            } else {
+              errorInfo.rawError = error;
+            }
+          }
+          
+          // Include status code from result
+          if (result && typeof result === 'object') {
+            if ('status' in result) errorInfo.status = result.status;
+            if ('statusText' in result) errorInfo.statusText = result.statusText;
+          }
+          
+          // Ensure we have at least a message
+          if (!errorInfo.message) {
+            errorInfo.message = 'Unknown error';
+            errorInfo.rawErrorObject = error;
+          }
+          
+          // Log with JSON.stringify to ensure browser console shows the actual values
+          console.error('Error fetching user profile:', JSON.stringify(errorInfo, null, 2));
+          // Also log as object for browser console inspection
+          console.error('Error details:', errorInfo);
           setUserProfile(null);
         } else if (result.data) {
           setUserProfile(result.data);

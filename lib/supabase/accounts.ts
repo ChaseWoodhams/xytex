@@ -667,6 +667,7 @@ export async function createAccount(
           upload_batch_id: null,
           upload_list_name: null,
           pending_contract_sent: false,
+          total_vials_sold: 0,
         };
 
         const location = await createLocation(locationData);
@@ -780,6 +781,7 @@ export async function updateAccount(
           upload_batch_id: null,
           upload_list_name: null,
           pending_contract_sent: false,
+          total_vials_sold: 0,
         };
         const location = await createLocation(locationData);
         if (location) {

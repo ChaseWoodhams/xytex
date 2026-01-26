@@ -55,13 +55,22 @@ export async function middleware(request: NextRequest) {
     }
 
     // Check user role from database
-    const { data: userProfile } = await supabase
+    const { data: userProfile, error: profileError } = await supabase
       .from('users')
       .select('role')
       .eq('id', user.id)
       .single();
 
-    if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'bd_team')) {
+    // Log for debugging in development
+    if (process.env.NODE_ENV === 'development' && profileError) {
+      console.error('[Middleware] Error fetching user profile:', profileError);
+    }
+
+    // Block access if profile doesn't exist, query failed, or user doesn't have admin/bd_team role
+    if (profileError || !userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'bd_team')) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Middleware] Blocking admin access for user:', user?.email, 'Role:', userProfile?.role || 'not found');
+      }
       const url = request.nextUrl.clone();
       url.pathname = '/account';
       return NextResponse.redirect(url);

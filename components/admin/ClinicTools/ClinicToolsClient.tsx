@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Building2, UserPlus, Wrench, Package } from "lucide-react";
+import { Building2, UserPlus, Wrench, Package, Search } from "lucide-react";
 import AccountsTab from "./AccountsTab";
 import InvitationsTab from "./InvitationsTab";
 import DataToolsTab from "./DataToolsTab";
 import CarePackagesTab from "./CarePackagesTab";
+import LocationScrapingTab from "./LocationScrapingTab";
 
-type TabId = "accounts" | "invitations" | "data-tools" | "care-packages";
+type TabId = "accounts" | "invitations" | "data-tools" | "care-packages" | "location-scraping";
 
 export default function ClinicToolsClient() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function ClinicToolsClient() {
 
   useEffect(() => {
     const tab = searchParams.get("tab") as TabId;
-    if (tab && (tab === "accounts" || tab === "invitations" || tab === "data-tools")) {
+    if (tab && (tab === "accounts" || tab === "invitations" || tab === "data-tools" || tab === "care-packages" || tab === "location-scraping")) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -27,6 +28,7 @@ export default function ClinicToolsClient() {
     { id: "invitations", label: "Invitations", icon: UserPlus },
     { id: "data-tools", label: "Data Tools", icon: Wrench },
     { id: "care-packages", label: "Care Packages", icon: Package },
+    { id: "location-scraping", label: "Location Scraping", icon: Search },
   ];
 
   const handleTabChange = (tabId: TabId) => {
@@ -75,6 +77,7 @@ export default function ClinicToolsClient() {
           {activeTab === "invitations" && <InvitationsTab />}
           {activeTab === "data-tools" && <DataToolsTab />}
           {activeTab === "care-packages" && <CarePackagesTab />}
+          {activeTab === "location-scraping" && <LocationScrapingTab />}
         </div>
       </div>
     </div>

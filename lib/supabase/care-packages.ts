@@ -181,11 +181,10 @@ export async function listCarePackageShipmentsForMarketing(
         *,
         care_package_requests(
           requested_at,
-          requested_by
+          users!requested_by(full_name)
         ),
         accounts(name),
-        locations(name),
-        users:care_package_requests!inner.requested_by(full_name)
+        locations(name)
       `
     )
     .order('created_at', { ascending: false });
@@ -212,7 +211,7 @@ export async function listCarePackageShipmentsForMarketing(
     const request = row.care_package_requests?.[0] || row.care_package_requests;
     const account = row.accounts?.[0] || row.accounts;
     const location = row.locations?.[0] || row.locations;
-    const user = row.users?.[0] || row.users;
+    const user = request?.users?.[0] || request?.users;
 
     const materials = typeof row.materials_cost === 'number' ? row.materials_cost : Number(row.materials_cost ?? 0);
     const shipping = typeof row.shipping_cost === 'number' ? row.shipping_cost : Number(row.shipping_cost ?? 0);

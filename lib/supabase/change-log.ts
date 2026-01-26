@@ -16,7 +16,8 @@ export type ChangeLogActionType =
   | 'update_agreement'
   | 'delete_agreement'
   | 'upload_contract'
-  | 'upload_license';
+  | 'upload_license'
+  | 'add_vials';
 
 export type ChangeLogEntityType = 'account' | 'location' | 'agreement';
 

@@ -5,6 +5,42 @@ import { getCurrentUser } from '@/lib/supabase/users';
 import { NextResponse } from 'next/server';
 import { logChange, detectFieldChanges, formatChangedFields } from '@/lib/supabase/change-log';
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userProfile = await getCurrentUser();
+    if (!canAccessAdmin(userProfile)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const location = await getLocationById(id);
+
+    if (!location) {
+      return NextResponse.json({ error: 'Location not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(location);
+  } catch (error: any) {
+    console.error('Error fetching location:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

@@ -1,5 +1,5 @@
 import { createAdminClient } from './admin';
-import type { Location } from './types';
+import type { Location, LocationVialSale } from './types';
 import { getAccountById } from './accounts';
 
 export async function getLocationsByAccount(accountId: string): Promise<Location[]> {
@@ -477,3 +477,125 @@ export async function updateLocationLicenseDocumentUrl(
   return { success: true };
 }
 
+/**
+ * Add vials to a location
+ * Increments the total_vials_sold count and creates a sale record
+ */
+export async function addVialsToLocation(
+  locationId: string,
+  vialsCount: number,
+  userId: string,
+  notes?: string
+): Promise<{ success: boolean; data?: LocationVialSale; error?: string }> {
+  try {
+    const supabase = createAdminClient();
+
+    // Verify location exists
+    const location = await getLocationById(locationId);
+    if (!location) {
+      const errorMsg = `Location not found: ${locationId}`;
+      console.error(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+
+    // Calculate new total (handle case where total_vials_sold might not exist yet)
+    const currentTotal = typeof location.total_vials_sold === 'number' ? location.total_vials_sold : 0;
+    const newTotal = currentTotal + vialsCount;
+
+    // Start a transaction-like operation
+    // First, increment the total_vials_sold on the location
+    const { data: updatedLocation, error: updateError } = await (supabase.from('locations') as any)
+      .update({ 
+        total_vials_sold: newTotal,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', locationId)
+      .select()
+      .single();
+
+    if (updateError) {
+      const errorDetails = {
+        error: updateError,
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint,
+        code: updateError.code,
+        locationId,
+        vialsCount,
+        currentTotal,
+        newTotal,
+      };
+      console.error('Error updating location vials count:', JSON.stringify(errorDetails, null, 2));
+      return { 
+        success: false, 
+        error: `Failed to update location: ${updateError.message || updateError.code || 'Unknown error'}` 
+      };
+    }
+
+    // Then, create the sale record
+    const saleData = {
+      location_id: locationId,
+      vials_added: vialsCount,
+      entered_by: userId,
+      notes: notes || null,
+    };
+
+    const { data: saleRecord, error: insertError } = await (supabase.from('location_vial_sales') as any)
+      .insert(saleData)
+      .select()
+      .single();
+
+    if (insertError) {
+      const errorDetails = {
+        error: insertError,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        code: insertError.code,
+        saleData,
+        locationId,
+        userId,
+      };
+      console.error('Error creating vial sale record:', JSON.stringify(errorDetails, null, 2));
+      
+      // Rollback: decrement the total_vials_sold
+      await (supabase.from('locations') as any)
+        .update({ 
+          total_vials_sold: currentTotal,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', locationId);
+      
+      return { 
+        success: false, 
+        error: `Failed to create sale record: ${insertError.message || insertError.code || 'Unknown error'}` 
+      };
+    }
+
+    return { success: true, data: saleRecord };
+  } catch (error: any) {
+    const errorMsg = `Unexpected error in addVialsToLocation: ${error.message || 'Unknown error'}`;
+    console.error(errorMsg, error);
+    return { success: false, error: errorMsg };
+  }
+}
+
+/**
+ * Get all vial sales for a location
+ * Returns entries ordered by most recent first
+ */
+export async function getLocationVialSales(locationId: string): Promise<LocationVialSale[]> {
+  const supabase = createAdminClient();
+  
+  const { data, error } = await (supabase.from('location_vial_sales') as any)
+    .select('*')
+    .eq('location_id', locationId)
+    .order('entered_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching location vial sales:', error);
+    return [];
+  }
+
+  return data || [];
+}

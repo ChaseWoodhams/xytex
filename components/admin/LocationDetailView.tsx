@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Location, Account, Agreement } from "@/lib/supabase/types";
-import { ArrowLeft, MapPin, Building2, FileText, Trash2, Upload, Download, X, Shield, Eye } from "lucide-react";
+import type { Location, Account, Agreement, LocationVialSale, User } from "@/lib/supabase/types";
+import { ArrowLeft, MapPin, Building2, FileText, Trash2, Upload, Download, X, Shield, Eye, Plus, Package } from "lucide-react";
 import AgreementsList from "./AgreementsList";
 import LocationContacts from "./LocationContacts";
 import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
@@ -18,7 +18,7 @@ interface LocationDetailViewProps {
 }
 
 export default function LocationDetailView({
-  location,
+  location: initialLocation,
   account,
   agreements,
   isMultiLocation,
@@ -29,13 +29,23 @@ export default function LocationDetailView({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [currentDocumentUrl, setCurrentDocumentUrl] = useState<string | null>(location.agreement_document_url);
+  const [currentDocumentUrl, setCurrentDocumentUrl] = useState<string | null>(initialLocation.agreement_document_url);
   const [isUploadingLicense, setIsUploadingLicense] = useState(false);
   const [uploadLicenseError, setUploadLicenseError] = useState<string | null>(null);
-  const [currentLicenseUrl, setCurrentLicenseUrl] = useState<string | null>(location.license_document_url);
+  const [currentLicenseUrl, setCurrentLicenseUrl] = useState<string | null>(initialLocation.license_document_url);
   const [viewingLicensePdf, setViewingLicensePdf] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const licenseFileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Vial tracking state
+  const [location, setLocation] = useState<Location>(initialLocation);
+  const [vialSales, setVialSales] = useState<LocationVialSale[]>([]);
+  const [userMap, setUserMap] = useState<Map<string, User>>(new Map());
+  const [isLoadingVials, setIsLoadingVials] = useState(false);
+  const [isAddingVials, setIsAddingVials] = useState(false);
+  const [vialsInput, setVialsInput] = useState<string>("");
+  const [vialsNotes, setVialsNotes] = useState<string>("");
+  const [vialsError, setVialsError] = useState<string | null>(null);
 
   // Only show agreements and license tabs if this is a multi-location account
   // For single-location accounts, these tabs are on the account page
@@ -46,6 +56,128 @@ export default function LocationDetailView({
     ...(shouldShowAgreements ? [{ id: "license" as const, label: "License", icon: Shield }] : []),
     ...(shouldShowAgreements ? [{ id: "agreements" as const, label: "Agreements", icon: FileText }] : []),
   ];
+
+  // Fetch vial sales and user information
+  useEffect(() => {
+    const fetchVialSales = async () => {
+      setIsLoadingVials(true);
+      try {
+        const response = await fetch(`/api/admin/locations/${location.id}/vials`);
+        if (response.ok) {
+          const sales: LocationVialSale[] = await response.json();
+          setVialSales(sales);
+          
+          // Fetch user information for each unique user ID
+          const uniqueUserIds = [...new Set(sales.map(sale => sale.entered_by))];
+          const supabase = createSupabaseBrowserClient();
+          const userPromises = uniqueUserIds.map(async (userId) => {
+            const { data } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', userId)
+              .single();
+            return data ? { id: userId, user: data } : null;
+          });
+          
+          const userResults = await Promise.all(userPromises);
+          const newUserMap = new Map<string, User>();
+          userResults.forEach(result => {
+            if (result) {
+              newUserMap.set(result.id, result.user);
+            }
+          });
+          setUserMap(newUserMap);
+        }
+      } catch (error) {
+        console.error('Error fetching vial sales:', error);
+      } finally {
+        setIsLoadingVials(false);
+      }
+    };
+    
+    fetchVialSales();
+  }, [location.id]);
+
+  // Handle adding vials
+  const handleAddVials = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setVialsError(null);
+    
+    const vialsCount = parseInt(vialsInput, 10);
+    if (!vialsInput || isNaN(vialsCount) || vialsCount < 1) {
+      setVialsError('Please enter a valid number of vials (minimum 1)');
+      return;
+    }
+
+    setIsAddingVials(true);
+    try {
+      const response = await fetch(`/api/admin/locations/${location.id}/vials`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vials: vialsCount,
+          notes: vialsNotes.trim() || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        const errorMessage = error.error || 'Failed to add vials';
+        console.error('API Error:', errorMessage, error);
+        throw new Error(errorMessage);
+      }
+
+      const newSale = await response.json();
+      
+      // Refresh vial sales list
+      const refreshResponse = await fetch(`/api/admin/locations/${location.id}/vials`);
+      if (refreshResponse.ok) {
+        const sales: LocationVialSale[] = await refreshResponse.json();
+        setVialSales(sales);
+        
+        // Update location total_vials_sold
+        setLocation(prev => ({
+          ...prev,
+          total_vials_sold: (prev.total_vials_sold || 0) + vialsCount,
+        }));
+        
+        // Fetch user info for the new sale if needed
+        if (!userMap.has(newSale.entered_by)) {
+          const supabase = createSupabaseBrowserClient();
+          const { data } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', newSale.entered_by)
+            .single();
+          if (data) {
+            setUserMap(prev => new Map(prev).set(newSale.entered_by, data));
+          }
+        }
+      }
+
+      // Reset form
+      setVialsInput("");
+      setVialsNotes("");
+      router.refresh();
+    } catch (error: any) {
+      console.error('Error adding vials:', error);
+      setVialsError(error.message || 'Failed to add vials');
+    } finally {
+      setIsAddingVials(false);
+    }
+  };
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -349,6 +481,109 @@ export default function LocationDetailView({
           <div className="space-y-6">
             {/* Location Contacts - Show at top */}
             <LocationContacts locationId={location.id} />
+
+            {/* Vials Sold Section */}
+            <div className="bg-white rounded-xl shadow-md p-6">
+              <h2 className="text-xl font-heading font-semibold text-navy-900 mb-4 flex items-center gap-2">
+                <Package className="w-5 h-5 text-gold-600" />
+                Vials Sold
+              </h2>
+              
+              {/* Total Vials Display */}
+              <div className="mb-6">
+                <div className="bg-gold-50 border border-gold-200 rounded-lg p-4">
+                  <div className="text-sm text-navy-600 uppercase tracking-wide mb-1">Total Vials Sold</div>
+                  <div className="text-4xl font-bold text-navy-900">{location.total_vials_sold || 0}</div>
+                </div>
+              </div>
+
+              {/* Add Vials Form */}
+              <form onSubmit={handleAddVials} className="mb-6 space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="vials-count" className="block text-sm font-medium text-navy-700 mb-2">
+                      Number of Vials *
+                    </label>
+                    <input
+                      id="vials-count"
+                      type="number"
+                      min="1"
+                      value={vialsInput}
+                      onChange={(e) => setVialsInput(e.target.value)}
+                      disabled={isAddingVials}
+                      className="w-full px-4 py-2 border border-navy-300 rounded-lg focus:ring-2 focus:ring-gold-500 focus:border-gold-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      placeholder="Enter number of vials"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="vials-notes" className="block text-sm font-medium text-navy-700 mb-2">
+                      Notes (Optional)
+                    </label>
+                    <input
+                      id="vials-notes"
+                      type="text"
+                      value={vialsNotes}
+                      onChange={(e) => setVialsNotes(e.target.value)}
+                      disabled={isAddingVials}
+                      className="w-full px-4 py-2 border border-navy-300 rounded-lg focus:ring-2 focus:ring-gold-500 focus:border-gold-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      placeholder="Add any notes"
+                    />
+                  </div>
+                </div>
+                {vialsError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">{vialsError}</p>
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  disabled={isAddingVials}
+                  className="btn btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Plus className="w-4 h-4" />
+                  {isAddingVials ? 'Adding...' : 'Add Vials'}
+                </button>
+              </form>
+
+              {/* Vial Sales History */}
+              <div>
+                <h3 className="text-lg font-heading font-semibold text-navy-900 mb-4">Sales History</h3>
+                {isLoadingVials ? (
+                  <div className="text-center py-8 text-navy-600">Loading sales history...</div>
+                ) : vialSales.length === 0 ? (
+                  <div className="text-center py-8 text-navy-600">No vial sales recorded yet.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-navy-200">
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">Date/Time</th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">Vials Added</th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">Entered By</th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {vialSales.map((sale) => {
+                          const user = userMap.get(sale.entered_by);
+                          return (
+                            <tr key={sale.id} className="border-b border-navy-100 hover:bg-navy-50">
+                              <td className="py-3 px-4 text-sm text-navy-900">{formatDate(sale.entered_at)}</td>
+                              <td className="py-3 px-4 text-sm font-medium text-navy-900">{sale.vials_added}</td>
+                              <td className="py-3 px-4 text-sm text-navy-700">
+                                {user?.full_name || user?.email || 'Unknown User'}
+                              </td>
+                              <td className="py-3 px-4 text-sm text-navy-600">{sale.notes || '-'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Location Codes */}
         {(location.clinic_code || location.sage_code) && (

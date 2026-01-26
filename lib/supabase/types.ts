@@ -157,8 +157,19 @@ export interface Location {
   upload_batch_id: string | null;
   upload_list_name: string | null;
   pending_contract_sent: boolean;
+  total_vials_sold: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface LocationVialSale {
+  id: string;
+  location_id: string;
+  vials_added: number;
+  entered_by: string;
+  entered_at: string;
+  notes: string | null;
+  created_at: string;
 }
 
 export type LocationUploadStatus = 'completed' | 'reverted';
@@ -290,6 +301,171 @@ export interface CarePackageShipment {
   created_at: string;
 }
 
+export interface MarketingDonor {
+  id: string;
+  name: string | null;
+  year_of_birth: number | null;
+  marital_status: string | null;
+  number_of_children: number | null;
+  occupation: string | null;
+  education: string | null;
+  blood_type: string | null;
+  nationality_maternal: string | null;
+  nationality_paternal: string | null;
+  race: string | null;
+  cmv_status: string | null;
+  height_feet_inches: string | null;
+  height_cm: number | null;
+  weight_lbs: number | null;
+  weight_kg: number | null;
+  eye_color: string | null;
+  hair_color: string | null;
+  hair_texture: string | null;
+  hair_loss: string | null;
+  hair_type: string | null;
+  body_build: string | null;
+  freckles: string | null;
+  skin_tone: string | null;
+  genetic_tests_count: number | null;
+  genetic_test_results: Record<string, any> | null;
+  last_medical_history_update: string | null;
+  health_info: Record<string, any> | null;
+  health_comments: string | null;
+  skills_hobbies_interests: string | null;
+  personality_description: string | null;
+  education_details: Record<string, any> | null;
+  immediate_family_history: Record<string, any> | null;
+  paternal_family_history: Record<string, any> | null;
+  maternal_family_history: Record<string, any> | null;
+  health_diseases: Record<string, any> | null;
+  vial_options: any[] | null;
+  compliance_flags: Record<string, any> | null;
+  audio_file_available: boolean | null;
+  photos_available: boolean | null;
+  inventory_summary: string | null;
+  profile_current_date: string | null;
+  document_id: string | null;
+  source_url: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ScrapingStatus = 'pending' | 'success' | 'failed' | 'skipped';
+export type ScrapingJobType = 'full' | 'incremental';
+export type ScrapingJobStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+export interface ScrapingCredentials {
+  id: string;
+  xytex_email: string;
+  xytex_password: string;
+  last_used_at: string | null;
+  is_active: boolean | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DonorIdListItem {
+  id: string;
+  donor_id: string;
+  is_active: boolean | null;
+  last_scraped_at: string | null;
+  last_successful_scrape_at: string | null;
+  consecutive_failures: number | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface ScrapingJob {
+  id: string;
+  job_type: ScrapingJobType;
+  status: ScrapingJobStatus;
+  total_donors: number | null;
+  processed_count: number | null;
+  success_count: number | null;
+  failed_count: number | null;
+  started_at: string | null;
+  completed_at: string | null;
+  error_message: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScrapingResult {
+  id: string;
+  job_id: string | null;
+  donor_id: string;
+  scrape_status: ScrapingStatus;
+  banner_message: string | null;
+  scraped_data: Record<string, any> | null;
+  error_message: string | null;
+  profile_current_date: string | null;
+  document_id: string | null;
+  changes_detected: Record<string, any> | null;
+  scraped_at: string;
+  scraped_by: string | null;
+}
+
+// Location Scraping Types
+export type LocationScrapingSource = 'google_maps' | 'linkedin' | 'website' | 'all';
+export type LocationScrapingJobStatus = 'pending' | 'running' | 'completed' | 'failed';
+export type LocationScrapingCredentialService = 'google_maps' | 'linkedin' | 'serpapi' | 'scraperapi';
+
+export interface LocationScrapingJob {
+  id: string;
+  search_query: string;
+  source: LocationScrapingSource;
+  status: LocationScrapingJobStatus;
+  results_count: number;
+  error_message: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LocationScrapingResult {
+  id: string;
+  job_id: string | null;
+  source: LocationScrapingSource;
+  business_name: string | null;
+  google_place_id: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
+  country: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  employees: Array<{
+    name: string;
+    title: string | null;
+    email: string | null;
+    phone: string | null;
+  }>;
+  business_hours: Record<string, any> | null;
+  rating: number | null;
+  review_count: number | null;
+  categories: string[];
+  linkedin_url: string | null;
+  scraped_data: Record<string, any>;
+  matched_location_id: string | null;
+  matched_account_id: string | null;
+  scraped_at: string;
+}
+
+export interface LocationScrapingCredentials {
+  id: string;
+  service: LocationScrapingCredentialService;
+  api_key: string;
+  is_active: boolean;
+  last_used_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // Database response types (with Supabase metadata)
 export interface Database {
   public: {
@@ -353,6 +529,51 @@ export interface Database {
         Row: CarePackageShipment;
         Insert: Omit<CarePackageShipment, 'id' | 'created_at' | 'total_cost'>;
         Update: Partial<Omit<CarePackageShipment, 'id' | 'created_at' | 'request_id'>>;
+      };
+      marketing_donors: {
+        Row: MarketingDonor;
+        Insert: Omit<MarketingDonor, 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<MarketingDonor, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      scraping_credentials: {
+        Row: ScrapingCredentials;
+        Insert: Omit<ScrapingCredentials, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<ScrapingCredentials, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      donor_id_list: {
+        Row: DonorIdListItem;
+        Insert: Omit<DonorIdListItem, 'id' | 'created_at'>;
+        Update: Partial<Omit<DonorIdListItem, 'id' | 'created_at'>>;
+      };
+      scraping_jobs: {
+        Row: ScrapingJob;
+        Insert: Omit<ScrapingJob, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<ScrapingJob, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      scraping_results: {
+        Row: ScrapingResult;
+        Insert: Omit<ScrapingResult, 'id' | 'scraped_at'>;
+        Update: Partial<Omit<ScrapingResult, 'id' | 'scraped_at'>>;
+      };
+      location_vial_sales: {
+        Row: LocationVialSale;
+        Insert: Omit<LocationVialSale, 'id' | 'created_at'>;
+        Update: Partial<Omit<LocationVialSale, 'id' | 'created_at'>>;
+      };
+      location_scraping_jobs: {
+        Row: LocationScrapingJob;
+        Insert: Omit<LocationScrapingJob, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<LocationScrapingJob, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      location_scraping_results: {
+        Row: LocationScrapingResult;
+        Insert: Omit<LocationScrapingResult, 'id' | 'scraped_at'>;
+        Update: Partial<Omit<LocationScrapingResult, 'id' | 'scraped_at'>>;
+      };
+      location_scraping_credentials: {
+        Row: LocationScrapingCredentials;
+        Insert: Omit<LocationScrapingCredentials, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<LocationScrapingCredentials, 'id' | 'created_at' | 'updated_at'>>;
       };
     };
   };

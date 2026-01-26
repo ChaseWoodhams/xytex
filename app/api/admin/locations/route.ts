@@ -24,6 +24,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const accountId = searchParams.get('accountId');
+    const search = searchParams.get('search');
 
     if (accountId) {
       // Return locations for specific account
@@ -31,12 +32,15 @@ export async function GET(request: Request) {
       return NextResponse.json(locations);
     }
 
-    // Return all locations
+    // Return all locations with optional search
     const adminClient = createAdminClient();
-    const { data, error } = await adminClient
-      .from('locations')
-      .select('*')
-      .order('created_at', { ascending: false });
+    let query = adminClient.from('locations').select('*');
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,address_line1.ilike.%${search}%,city.ilike.%${search}%,phone.ilike.%${search}%`);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching locations:', error);
