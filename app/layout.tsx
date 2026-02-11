@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Playfair_Display, DM_Sans } from "next/font/google";
-import ConditionalLayout from "@/components/layout/ConditionalLayout";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { ToasterProvider } from "@/components/shared/ToasterProvider";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -67,12 +67,11 @@ export default function RootLayout({
             Skip to main content
           </a>
           <div className="min-h-screen w-full overflow-x-hidden">
-            <ConditionalLayout>
-              <main id="main-content" tabIndex={-1} className="w-full overflow-x-hidden">
-                {children}
-              </main>
-            </ConditionalLayout>
+            <main id="main-content" tabIndex={-1} className="w-full overflow-x-hidden">
+              {children}
+            </main>
           </div>
+          <ToasterProvider />
         </AuthProvider>
       </body>
     </html>

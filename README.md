@@ -94,10 +94,13 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 3. **Configure environment variables**
    - In the Vercel project settings, go to **Settings > Environment Variables**
-   - Add the following variables:
-     - `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
-     - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anonymous key
-     - `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key (keep secret!)
+   - Add the variables listed in [`.env.example`](./.env.example). Required for production:
+     - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
+     - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
+     - `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (keep secret!)
+     - `NEXT_PUBLIC_SITE_URL` - Production URL (e.g. `https://your-app.vercel.app`) for invitation/signup redirects
+     - `RESEND_API_KEY` - For email invitations
+     - `CRON_SECRET` - Protects `/api/cron/scrape-donors` (set a random string)
    - Apply to all environments (Production, Preview, Development)
 
 4. **Deploy**
@@ -123,10 +126,14 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    ```
 
 4. **Set environment variables**
+   See [`.env.example`](./.env.example) for the full list. At minimum:
    ```bash
    vercel env add NEXT_PUBLIC_SUPABASE_URL
    vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
    vercel env add SUPABASE_SERVICE_ROLE_KEY
+   vercel env add NEXT_PUBLIC_SITE_URL
+   vercel env add RESEND_API_KEY
+   vercel env add CRON_SECRET
    ```
 
 5. **Redeploy with environment variables**
@@ -164,7 +171,6 @@ xytex/
 
 All documentation is located in the [`docs/`](./docs/) directory:
 
-- [`docs/AGENTS.md`](./docs/AGENTS.md) - Detailed project documentation for AI agents
 - [`docs/SUPABASE_SETUP.md`](./docs/SUPABASE_SETUP.md) - Supabase setup instructions
 - [`docs/ADMIN_CRM_SETUP.md`](./docs/ADMIN_CRM_SETUP.md) - Admin CRM setup guide
 - [`docs/STYLE_GUIDE.md`](./docs/STYLE_GUIDE.md) - Comprehensive design system and style guide

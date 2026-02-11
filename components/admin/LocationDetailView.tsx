@@ -3,10 +3,13 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Location, Account, Agreement, LocationVialSale, User } from "@/lib/supabase/types";
-import { ArrowLeft, MapPin, Building2, FileText, Trash2, Upload, Download, X, Shield, Eye, Plus, Package } from "lucide-react";
+import type { Location, Account, Agreement, LocationVialSale, User, Note } from "@/lib/supabase/types";
+import { ArrowLeft, MapPin, Building2, FileText, Trash2, Upload, Download, X, Shield, Eye, Plus, Package, Edit, StickyNote, ChevronDown, ChevronRight, Check, Pencil } from "lucide-react";
+import { showToast } from "@/components/shared/toast";
 import AgreementsList from "./AgreementsList";
 import LocationContacts from "./LocationContacts";
+import LocationForm from "./LocationForm";
+import NotesSection from "./NotesSection";
 import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
 import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -15,6 +18,8 @@ interface LocationDetailViewProps {
   account: Account;
   agreements: Agreement[];
   isMultiLocation: boolean;
+  notes?: Note[];
+  currentUserId?: string;
 }
 
 export default function LocationDetailView({
@@ -22,9 +27,11 @@ export default function LocationDetailView({
   account,
   agreements,
   isMultiLocation,
+  notes = [],
+  currentUserId = "",
 }: LocationDetailViewProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"overview" | "agreements" | "license">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "agreements" | "license" | "notes">("overview");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -46,6 +53,12 @@ export default function LocationDetailView({
   const [vialsInput, setVialsInput] = useState<string>("");
   const [vialsNotes, setVialsNotes] = useState<string>("");
   const [vialsError, setVialsError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showImportData, setShowImportData] = useState(false);
+  const [inlineEditField, setInlineEditField] = useState<string | null>(null);
+  const [inlineEditValue, setInlineEditValue] = useState<string>("");
+  const [isSavingInline, setIsSavingInline] = useState(false);
+  const [hasLocationContacts, setHasLocationContacts] = useState(false);
 
   // Only show agreements and license tabs if this is a multi-location account
   // For single-location accounts, these tabs are on the account page
@@ -55,6 +68,7 @@ export default function LocationDetailView({
     { id: "overview", label: "Overview", icon: MapPin },
     ...(shouldShowAgreements ? [{ id: "license" as const, label: "License", icon: Shield }] : []),
     ...(shouldShowAgreements ? [{ id: "agreements" as const, label: "Agreements", icon: FileText }] : []),
+    { id: "notes" as const, label: "Notes", icon: StickyNote },
   ];
 
   // Fetch vial sales and user information
@@ -404,28 +418,103 @@ export default function LocationDetailView({
     }
   };
 
+  // Inline edit handlers
+  const startInlineEdit = (field: string, currentValue: string) => {
+    setInlineEditField(field);
+    setInlineEditValue(currentValue || "");
+  };
+
+  const cancelInlineEdit = () => {
+    setInlineEditField(null);
+    setInlineEditValue("");
+  };
+
+  const saveInlineEdit = async () => {
+    if (!inlineEditField) return;
+    setIsSavingInline(true);
+    try {
+      const response = await fetch(`/api/admin/locations/${location.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [inlineEditField]: inlineEditValue.trim() || null }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update');
+      }
+
+      setLocation(prev => ({ ...prev, [inlineEditField!]: inlineEditValue.trim() || null }));
+      showToast("Updated successfully", "success");
+      setInlineEditField(null);
+      setInlineEditValue("");
+      router.refresh();
+    } catch (error: any) {
+      console.error('Error saving inline edit:', error);
+      showToast(error.message || 'Failed to save', "error");
+    } finally {
+      setIsSavingInline(false);
+    }
+  };
+
   return (
     <div className="p-8">
-      <Link
-        href={`/admin/accounts/${account.id}`}
-        className="inline-flex items-center gap-2 text-navy-600 hover:text-navy-900 mb-6"
+      <nav
+        aria-label="Breadcrumb"
+        className="mb-4 text-sm text-navy-600 flex items-center gap-2 flex-wrap"
       >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Account
-      </Link>
+        <Link href="/admin/clinic-tools" className="hover:text-navy-900">
+          Clinic Tools
+        </Link>
+        <span className="text-navy-400">/</span>
+        <Link href="/admin/accounts" className="hover:text-navy-900">
+          Accounts
+        </Link>
+        <span className="text-navy-400">/</span>
+        <Link
+          href={`/admin/accounts/${account.id}`}
+          className="hover:text-navy-900 max-w-xs md:max-w-sm truncate"
+        >
+          {account.name}
+        </Link>
+        <span className="text-navy-400">/</span>
+        <span className="text-navy-900 font-medium max-w-xs md:max-w-sm truncate">
+          {location.name}
+        </span>
+      </nav>
 
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-4xl font-heading font-bold text-navy-900">
             {location.name}
           </h1>
-          <button
-            onClick={() => setShowDeleteDialog(true)}
-            className="px-4 py-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-2"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete Location
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className="px-4 py-2 text-gold-600 bg-gold-50 rounded-lg hover:bg-gold-100 transition-colors flex items-center gap-2"
+            >
+              {isEditing ? (
+                <>
+                  <X className="w-4 h-4" />
+                  Cancel Edit
+                </>
+              ) : (
+                <>
+                  <Edit className="w-4 h-4" />
+                  Edit Location
+                </>
+              )}
+            </button>
+            {!isEditing && (
+              <button
+                onClick={() => setShowDeleteDialog(true)}
+                className="px-4 py-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Location
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-4">
           {location.is_primary && (
@@ -452,7 +541,28 @@ export default function LocationDetailView({
         </div>
       </div>
 
+      {/* Edit Form */}
+      {isEditing && (
+        <div className="mb-6 bg-white rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-heading font-semibold text-navy-900 mb-4">
+            Edit Location
+          </h2>
+          <LocationForm
+            accountId={account.id}
+            location={location}
+            onSuccess={() => {
+              setIsEditing(false);
+              showToast("Location updated successfully", "success");
+              router.refresh();
+            }}
+            onCancel={() => setIsEditing(false)}
+          />
+        </div>
+      )}
+
       {/* Tabs */}
+      {!isEditing && (
+      <>
       <div className="border-b border-navy-200 mb-6">
         <nav className="flex gap-4">
           {tabs.map((tab) => {
@@ -480,7 +590,7 @@ export default function LocationDetailView({
         {activeTab === "overview" && (
           <div className="space-y-6">
             {/* Location Contacts - Show at top */}
-            <LocationContacts locationId={location.id} />
+            <LocationContacts locationId={location.id} onContactsLoaded={(count) => setHasLocationContacts(count > 0)} />
 
             {/* Vials Sold Section */}
             <div className="bg-white rounded-xl shadow-md p-6">
@@ -608,22 +718,39 @@ export default function LocationDetailView({
           </div>
         )}
 
-        {/* Location Information */}
+        {/* Location Information - Inline Editable */}
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-xl font-heading font-semibold text-navy-900 mb-4 flex items-center gap-2">
             <MapPin className="w-5 h-5 text-gold-600" />
             Location Information
           </h2>
           <dl className="space-y-3">
-            {(location.address_line1 || location.address_line2) && (
-              <div>
-                <dt className="text-sm text-navy-600">Address</dt>
-                <dd className="text-navy-900">
-                  {location.address_line1}
-                  {location.address_line2 && `, ${location.address_line2}`}
+            {/* Address */}
+            <div className="group">
+              <dt className="text-sm text-navy-600">Address</dt>
+              {inlineEditField === 'address_line1' ? (
+                <dd className="flex items-center gap-2 mt-1">
+                  <input
+                    type="text"
+                    value={inlineEditValue}
+                    onChange={(e) => setInlineEditValue(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') saveInlineEdit(); if (e.key === 'Escape') cancelInlineEdit(); }}
+                    className="flex-1 px-2 py-1 border border-gold-400 rounded focus:outline-none focus:ring-2 focus:ring-gold-500 text-sm"
+                    autoFocus
+                    disabled={isSavingInline}
+                  />
+                  <button onClick={saveInlineEdit} disabled={isSavingInline} className="p-1 text-green-600 hover:bg-green-50 rounded"><Check className="w-4 h-4" /></button>
+                  <button onClick={cancelInlineEdit} className="p-1 text-navy-600 hover:bg-navy-50 rounded"><X className="w-4 h-4" /></button>
                 </dd>
-              </div>
-            )}
+              ) : (
+                <dd className="text-navy-900 flex items-center gap-1">
+                  <span>{location.address_line1 || 'Not set'}{location.address_line2 && `, ${location.address_line2}`}</span>
+                  <button onClick={() => startInlineEdit('address_line1', location.address_line1 || '')} className="p-1 text-navy-400 hover:text-gold-600 opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="w-3 h-3" /></button>
+                </dd>
+              )}
+            </div>
+
+            {/* City, State, ZIP */}
             {(location.city || location.state || location.zip_code) && (
               <div>
                 <dt className="text-sm text-navy-600">City, State, ZIP</dt>
@@ -634,53 +761,110 @@ export default function LocationDetailView({
                 </dd>
               </div>
             )}
+
+            {/* Country */}
             {location.country && (
               <div>
                 <dt className="text-sm text-navy-600">Country</dt>
                 <dd className="text-navy-900">{location.country}</dd>
               </div>
             )}
-            {location.phone && (
-              <div>
-                <dt className="text-sm text-navy-600">Phone</dt>
-                <dd className="text-navy-900">
-                  <a
-                    href={`tel:${location.phone}`}
-                    className="text-gold-600 hover:text-gold-700"
-                  >
-                    {location.phone}
-                  </a>
+
+            {/* Phone - Inline Editable */}
+            <div className="group">
+              <dt className="text-sm text-navy-600">Phone</dt>
+              {inlineEditField === 'phone' ? (
+                <dd className="flex items-center gap-2 mt-1">
+                  <input
+                    type="tel"
+                    value={inlineEditValue}
+                    onChange={(e) => setInlineEditValue(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') saveInlineEdit(); if (e.key === 'Escape') cancelInlineEdit(); }}
+                    className="flex-1 px-2 py-1 border border-gold-400 rounded focus:outline-none focus:ring-2 focus:ring-gold-500 text-sm"
+                    autoFocus
+                    disabled={isSavingInline}
+                  />
+                  <button onClick={saveInlineEdit} disabled={isSavingInline} className="p-1 text-green-600 hover:bg-green-50 rounded"><Check className="w-4 h-4" /></button>
+                  <button onClick={cancelInlineEdit} className="p-1 text-navy-600 hover:bg-navy-50 rounded"><X className="w-4 h-4" /></button>
                 </dd>
-              </div>
-            )}
-            {location.email && (
-              <div>
-                <dt className="text-sm text-navy-600">Email</dt>
-                <dd className="text-navy-900">
-                  <a
-                    href={`mailto:${location.email}`}
-                    className="text-gold-600 hover:text-gold-700"
-                  >
-                    {location.email}
-                  </a>
+              ) : (
+                <dd className="text-navy-900 flex items-center gap-1">
+                  {location.phone ? (
+                    <a href={`tel:${location.phone}`} className="text-gold-600 hover:text-gold-700">{location.phone}</a>
+                  ) : (
+                    <span className="text-navy-400">Not set</span>
+                  )}
+                  <button onClick={() => startInlineEdit('phone', location.phone || '')} className="p-1 text-navy-400 hover:text-gold-600 opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="w-3 h-3" /></button>
                 </dd>
-              </div>
-            )}
-            {location.contact_name && (
+              )}
+            </div>
+
+            {/* Email - Inline Editable */}
+            <div className="group">
+              <dt className="text-sm text-navy-600">Email</dt>
+              {inlineEditField === 'email' ? (
+                <dd className="flex items-center gap-2 mt-1">
+                  <input
+                    type="email"
+                    value={inlineEditValue}
+                    onChange={(e) => setInlineEditValue(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') saveInlineEdit(); if (e.key === 'Escape') cancelInlineEdit(); }}
+                    className="flex-1 px-2 py-1 border border-gold-400 rounded focus:outline-none focus:ring-2 focus:ring-gold-500 text-sm"
+                    autoFocus
+                    disabled={isSavingInline}
+                  />
+                  <button onClick={saveInlineEdit} disabled={isSavingInline} className="p-1 text-green-600 hover:bg-green-50 rounded"><Check className="w-4 h-4" /></button>
+                  <button onClick={cancelInlineEdit} className="p-1 text-navy-600 hover:bg-navy-50 rounded"><X className="w-4 h-4" /></button>
+                </dd>
+              ) : (
+                <dd className="text-navy-900 flex items-center gap-1">
+                  {location.email ? (
+                    <a href={`mailto:${location.email}`} className="text-gold-600 hover:text-gold-700">{location.email}</a>
+                  ) : (
+                    <span className="text-navy-400">Not set</span>
+                  )}
+                  <button onClick={() => startInlineEdit('email', location.email || '')} className="p-1 text-navy-400 hover:text-gold-600 opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="w-3 h-3" /></button>
+                </dd>
+              )}
+            </div>
+
+            {/* Legacy Contact Name - hidden when location_contacts exist */}
+            {location.contact_name && !hasLocationContacts && (
               <div>
-                <dt className="text-sm text-navy-600">Contact Name</dt>
+                <dt className="text-sm text-navy-600">Contact Name (Legacy)</dt>
                 <dd className="text-navy-900">
                   {location.contact_name}
                   {location.contact_title && ` (${location.contact_title})`}
                 </dd>
               </div>
             )}
-            {location.notes && (
-              <div>
-                <dt className="text-sm text-navy-600">Notes</dt>
-                <dd className="text-navy-700 whitespace-pre-wrap">{location.notes}</dd>
-              </div>
-            )}
+
+            {/* Notes - Inline Editable */}
+            <div className="group">
+              <dt className="text-sm text-navy-600">Quick Notes</dt>
+              {inlineEditField === 'notes' ? (
+                <dd className="mt-1">
+                  <textarea
+                    value={inlineEditValue}
+                    onChange={(e) => setInlineEditValue(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Escape') cancelInlineEdit(); }}
+                    rows={3}
+                    className="w-full px-2 py-1 border border-gold-400 rounded focus:outline-none focus:ring-2 focus:ring-gold-500 text-sm"
+                    autoFocus
+                    disabled={isSavingInline}
+                  />
+                  <div className="flex gap-2 mt-1">
+                    <button onClick={saveInlineEdit} disabled={isSavingInline} className="px-3 py-1 text-sm text-white bg-gold-600 rounded hover:bg-gold-700 flex items-center gap-1"><Check className="w-3 h-3" /> Save</button>
+                    <button onClick={cancelInlineEdit} className="px-3 py-1 text-sm text-navy-600 bg-navy-100 rounded hover:bg-navy-200">Cancel</button>
+                  </div>
+                </dd>
+              ) : (
+                <dd className="text-navy-700 flex items-start gap-1">
+                  <span className="whitespace-pre-wrap">{location.notes || <span className="text-navy-400">No notes</span>}</span>
+                  <button onClick={() => startInlineEdit('notes', location.notes || '')} className="p-1 text-navy-400 hover:text-gold-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"><Pencil className="w-3 h-3" /></button>
+                </dd>
+              )}
+            </div>
           </dl>
         </div>
 
@@ -775,141 +959,128 @@ export default function LocationDetailView({
           )}
         </div>
 
-        {/* Account UDF Information */}
-        {(account.sage_code || account.udf_clinic_name || account.udf_shipto_name || account.udf_country_code) && (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-heading font-semibold text-navy-900 mb-4 flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-gold-600" />
-              Account Information
-            </h2>
-            <dl className="space-y-3 grid md:grid-cols-2 gap-4">
-              {account.sage_code && (
-                <div>
-                  <dt className="text-sm text-navy-600">Sage Code</dt>
-                  <dd className="text-navy-900">{account.sage_code}</dd>
-                </div>
+        {/* Import / Legacy Data - Collapsible */}
+        {(account.sage_code || account.udf_clinic_name || account.udf_shipto_name || account.udf_country_code ||
+          account.udf_address_line1 || account.udf_address_line2 || account.udf_address_line3 ||
+          account.udf_city || account.udf_state || account.udf_zipcode ||
+          account.udf_phone || account.udf_email || account.udf_fax || account.udf_notes) && (
+          <div className="bg-white rounded-xl shadow-md overflow-hidden">
+            <button
+              onClick={() => setShowImportData(!showImportData)}
+              className="w-full px-6 py-4 flex items-center justify-between hover:bg-navy-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Building2 className="w-5 h-5 text-navy-400" />
+                <h2 className="text-lg font-heading font-semibold text-navy-700">
+                  Import / Legacy Data
+                </h2>
+                <span className="text-xs text-navy-500 bg-navy-100 px-2 py-0.5 rounded-full">
+                  From Account Import
+                </span>
+              </div>
+              {showImportData ? (
+                <ChevronDown className="w-5 h-5 text-navy-400" />
+              ) : (
+                <ChevronRight className="w-5 h-5 text-navy-400" />
               )}
-              {account.udf_clinic_name && (
-                <div>
-                  <dt className="text-sm text-navy-600">Clinic Name</dt>
-                  <dd className="text-navy-900">{account.udf_clinic_name}</dd>
-                </div>
-              )}
-              {account.udf_shipto_name && (
-                <div>
-                  <dt className="text-sm text-navy-600">Shipto Name</dt>
-                  <dd className="text-navy-900">{account.udf_shipto_name}</dd>
-                </div>
-              )}
-              {account.udf_country_code && (
-                <div>
-                  <dt className="text-sm text-navy-600">Country Code</dt>
-                  <dd className="text-navy-900">{account.udf_country_code}</dd>
-                </div>
-              )}
-            </dl>
-          </div>
-        )}
+            </button>
 
-        {/* Account Address Information */}
-        {(account.udf_address_line1 || account.udf_address_line2 || account.udf_address_line3 || account.udf_city || account.udf_state || account.udf_zipcode) && (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-heading font-semibold text-navy-900 mb-4">
-              Account Address Information
-            </h2>
-            <dl className="space-y-3">
-              {account.udf_address_line1 && (
-                <div>
-                  <dt className="text-sm text-navy-600">Address Line 1</dt>
-                  <dd className="text-navy-900">{account.udf_address_line1}</dd>
-                </div>
-              )}
-              {account.udf_address_line2 && (
-                <div>
-                  <dt className="text-sm text-navy-600">Address Line 2</dt>
-                  <dd className="text-navy-900">{account.udf_address_line2}</dd>
-                </div>
-              )}
-              {account.udf_address_line3 && (
-                <div>
-                  <dt className="text-sm text-navy-600">Address Line 3</dt>
-                  <dd className="text-navy-900">{account.udf_address_line3}</dd>
-                </div>
-              )}
-              <div className="grid md:grid-cols-3 gap-4">
-                {account.udf_city && (
-                  <div>
-                    <dt className="text-sm text-navy-600">City</dt>
-                    <dd className="text-navy-900">{account.udf_city}</dd>
+            {showImportData && (
+              <div className="px-6 pb-6 space-y-6 border-t border-navy-100">
+                {/* Account Identifiers */}
+                {(account.sage_code || account.udf_clinic_name || account.udf_shipto_name || account.udf_country_code) && (
+                  <div className="pt-4">
+                    <h3 className="text-sm font-semibold text-navy-700 mb-3 uppercase tracking-wide">Account Identifiers</h3>
+                    <dl className="grid md:grid-cols-2 gap-4">
+                      {account.sage_code && (
+                        <div>
+                          <dt className="text-sm text-navy-600">Sage Code</dt>
+                          <dd className="text-navy-900">{account.sage_code}</dd>
+                        </div>
+                      )}
+                      {account.udf_clinic_name && (
+                        <div>
+                          <dt className="text-sm text-navy-600">Clinic Name (Import)</dt>
+                          <dd className="text-navy-900">{account.udf_clinic_name}</dd>
+                        </div>
+                      )}
+                      {account.udf_shipto_name && (
+                        <div>
+                          <dt className="text-sm text-navy-600">Ship-To Name</dt>
+                          <dd className="text-navy-900">{account.udf_shipto_name}</dd>
+                        </div>
+                      )}
+                      {account.udf_country_code && (
+                        <div>
+                          <dt className="text-sm text-navy-600">Country Code</dt>
+                          <dd className="text-navy-900">{account.udf_country_code}</dd>
+                        </div>
+                      )}
+                    </dl>
                   </div>
                 )}
-                {account.udf_state && (
-                  <div>
-                    <dt className="text-sm text-navy-600">State</dt>
-                    <dd className="text-navy-900">{account.udf_state}</dd>
+
+                {/* Account Address */}
+                {(account.udf_address_line1 || account.udf_address_line2 || account.udf_address_line3 || account.udf_city || account.udf_state || account.udf_zipcode) && (
+                  <div className="pt-4 border-t border-navy-100">
+                    <h3 className="text-sm font-semibold text-navy-700 mb-3 uppercase tracking-wide">Account Address (Import)</h3>
+                    <dl className="space-y-2">
+                      {account.udf_address_line1 && <dd className="text-navy-900">{account.udf_address_line1}</dd>}
+                      {account.udf_address_line2 && <dd className="text-navy-900">{account.udf_address_line2}</dd>}
+                      {account.udf_address_line3 && <dd className="text-navy-900">{account.udf_address_line3}</dd>}
+                      {(account.udf_city || account.udf_state || account.udf_zipcode) && (
+                        <dd className="text-navy-900">
+                          {[account.udf_city, account.udf_state, account.udf_zipcode].filter(Boolean).join(', ')}
+                        </dd>
+                      )}
+                    </dl>
                   </div>
                 )}
-                {account.udf_zipcode && (
-                  <div>
-                    <dt className="text-sm text-navy-600">Zipcode</dt>
-                    <dd className="text-navy-900">{account.udf_zipcode}</dd>
+
+                {/* Account Contact */}
+                {(account.udf_phone || account.udf_email || account.udf_fax) && (
+                  <div className="pt-4 border-t border-navy-100">
+                    <h3 className="text-sm font-semibold text-navy-700 mb-3 uppercase tracking-wide">Account Contact (Import)</h3>
+                    <dl className="grid md:grid-cols-3 gap-4">
+                      {account.udf_phone && (
+                        <div>
+                          <dt className="text-sm text-navy-600">Phone</dt>
+                          <dd className="text-navy-900">
+                            <a href={`tel:${account.udf_phone}`} className="text-gold-600 hover:text-gold-700">
+                              {account.udf_phone}
+                            </a>
+                          </dd>
+                        </div>
+                      )}
+                      {account.udf_email && (
+                        <div>
+                          <dt className="text-sm text-navy-600">Email</dt>
+                          <dd className="text-navy-900">
+                            <a href={`mailto:${account.udf_email}`} className="text-gold-600 hover:text-gold-700">
+                              {account.udf_email}
+                            </a>
+                          </dd>
+                        </div>
+                      )}
+                      {account.udf_fax && (
+                        <div>
+                          <dt className="text-sm text-navy-600">Fax</dt>
+                          <dd className="text-navy-900">{account.udf_fax}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  </div>
+                )}
+
+                {/* Import Notes */}
+                {account.udf_notes && (
+                  <div className="pt-4 border-t border-navy-100">
+                    <h3 className="text-sm font-semibold text-navy-700 mb-3 uppercase tracking-wide">Import Notes</h3>
+                    <p className="text-navy-700 whitespace-pre-wrap">{account.udf_notes}</p>
                   </div>
                 )}
               </div>
-            </dl>
-          </div>
-        )}
-
-        {/* Account Contact Information */}
-        {(account.udf_phone || account.udf_email || account.udf_fax) && (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-heading font-semibold text-navy-900 mb-4">
-              Account Contact Information
-            </h2>
-            <dl className="space-y-3 grid md:grid-cols-3 gap-4">
-              {account.udf_phone && (
-                <div>
-                  <dt className="text-sm text-navy-600">Phone</dt>
-                  <dd className="text-navy-900">
-                    <a
-                      href={`tel:${account.udf_phone}`}
-                      className="text-gold-600 hover:text-gold-700"
-                    >
-                      {account.udf_phone}
-                    </a>
-                  </dd>
-                </div>
-              )}
-              {account.udf_email && (
-                <div>
-                  <dt className="text-sm text-navy-600">Email</dt>
-                  <dd className="text-navy-900">
-                    <a
-                      href={`mailto:${account.udf_email}`}
-                      className="text-gold-600 hover:text-gold-700"
-                    >
-                      {account.udf_email}
-                    </a>
-                  </dd>
-                </div>
-              )}
-              {account.udf_fax && (
-                <div>
-                  <dt className="text-sm text-navy-600">Fax</dt>
-                  <dd className="text-navy-900">{account.udf_fax}</dd>
-                </div>
-              )}
-            </dl>
-          </div>
-        )}
-
-        {/* Account Additional Notes */}
-        {account.udf_notes && (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-heading font-semibold text-navy-900 mb-4">
-              Account Additional Notes
-            </h2>
-            <p className="text-navy-700 whitespace-pre-wrap">{account.udf_notes}</p>
+            )}
           </div>
         )}
           </div>
@@ -1023,7 +1194,18 @@ export default function LocationDetailView({
             agreements={agreements}
           />
         )}
+
+        {activeTab === "notes" && (
+          <NotesSection
+            accountId={account.id}
+            notes={notes}
+            currentUserId={currentUserId}
+            locationId={location.id}
+          />
+        )}
       </div>
+      </>
+      )}
 
       {/* License PDF Viewer Modal */}
       {viewingLicensePdf && (
@@ -1089,7 +1271,7 @@ export default function LocationDetailView({
             router.refresh();
           } catch (error: any) {
             console.error('Error deleting location:', error);
-            alert(`Failed to delete location: ${error.message}`);
+            showToast(`Failed to delete location: ${error.message}`, "error");
             setIsDeleting(false);
           }
         }}

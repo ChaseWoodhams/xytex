@@ -86,7 +86,7 @@ export default function SignupForm() {
             // User is immediately signed in (email confirmation disabled)
             // Small delay to ensure session is persisted in cookies
             await new Promise(resolve => setTimeout(resolve, 200));
-            router.push("/browse-donors");
+            router.push("/admin");
             router.refresh();
           } else {
             // Email confirmation required

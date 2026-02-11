@@ -94,8 +94,39 @@ function normalizeName(name: string): string {
   return normalized;
 }
 
-export async function GET() {
+// Normalize address for comparison — strip case, whitespace, common abbreviations
+function normalizeAddress(parts: { city?: string | null; state?: string | null; zip?: string | null; address?: string | null }): string {
+  const segments: string[] = [];
+  if (parts.address) {
+    segments.push(
+      parts.address
+        .toLowerCase()
+        .replace(/\bsuite\b/g, 'ste')
+        .replace(/\bstreet\b/g, 'st')
+        .replace(/\bavenue\b/g, 'ave')
+        .replace(/\bdrive\b/g, 'dr')
+        .replace(/\bboulevard\b/g, 'blvd')
+        .replace(/\broad\b/g, 'rd')
+        .replace(/[.,#]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+    );
+  }
+  if (parts.city) segments.push(parts.city.toLowerCase().trim());
+  if (parts.state) segments.push(parts.state.toLowerCase().trim());
+  if (parts.zip) {
+    // Use first 5 digits of zip for comparison
+    const zip5 = parts.zip.replace(/[^0-9]/g, '').slice(0, 5);
+    if (zip5) segments.push(zip5);
+  }
+  return segments.join('|');
+}
+
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const mode = (searchParams.get('mode') || 'name') as 'name' | 'address' | 'both';
+
     // Check auth with regular client
     const supabase = await createClient();
     const {
@@ -255,62 +286,101 @@ export async function GET() {
       name: string;
       accounts: typeof accountsWithLocations;
       similarityScore: number;
+      matchType?: 'name' | 'address';
     }> = [];
     const processed = new Set<string>();
 
-    for (let i = 0; i < accountsWithLocations.length; i++) {
-      if (processed.has(accountsWithLocations[i].id)) continue;
+    // --- Name-based grouping ---
+    if (mode === 'name' || mode === 'both') {
+      for (let i = 0; i < accountsWithLocations.length; i++) {
+        if (processed.has(accountsWithLocations[i].id)) continue;
 
-      const account1 = accountsWithLocations[i];
-      const normalizedName1 = normalizeName(account1.name);
-      const group: typeof accountsWithLocations = [account1];
-      let minSimilarity = 1;
+        const account1 = accountsWithLocations[i];
+        const normalizedName1 = normalizeName(account1.name);
+        const group: typeof accountsWithLocations = [account1];
+        let minSimilarity = 1;
 
-      for (let j = i + 1; j < accountsWithLocations.length; j++) {
-        if (processed.has(accountsWithLocations[j].id)) continue;
+        for (let j = i + 1; j < accountsWithLocations.length; j++) {
+          if (processed.has(accountsWithLocations[j].id)) continue;
 
-        const account2 = accountsWithLocations[j];
-        const normalizedName2 = normalizeName(account2.name);
-        
-        // Only allow 100% if normalized names match exactly
-        let similarity: number;
-        if (normalizedName1 === normalizedName2 && normalizedName1.length > 0) {
-          // Exact match after normalization = 100%
-          similarity = 1.0;
-        } else {
-          // Calculate similarity for non-exact matches (will be < 100%)
-          similarity = calculateSimilarity(normalizedName1, normalizedName2);
-          // Cap at 99% for near-perfect matches that aren't exact
-          if (similarity >= 0.999) {
-            similarity = 0.99;
+          const account2 = accountsWithLocations[j];
+          const normalizedName2 = normalizeName(account2.name);
+          
+          let similarity: number;
+          if (normalizedName1 === normalizedName2 && normalizedName1.length > 0) {
+            similarity = 1.0;
+          } else {
+            similarity = calculateSimilarity(normalizedName1, normalizedName2);
+            if (similarity >= 0.999) {
+              similarity = 0.99;
+            }
+          }
+
+          if (similarity >= SIMILARITY_THRESHOLD) {
+            group.push(account2);
+            processed.add(account2.id);
+            minSimilarity = Math.min(minSimilarity, similarity);
           }
         }
 
-        if (similarity >= SIMILARITY_THRESHOLD) {
-          group.push(account2);
-          processed.add(account2.id);
-          minSimilarity = Math.min(minSimilarity, similarity);
+        if (group.length >= 2) {
+          processed.add(account1.id);
+          groups.push({
+            name: account1.name,
+            accounts: group,
+            similarityScore: minSimilarity,
+            matchType: 'name',
+          });
         }
       }
+    }
 
-      // Only include groups with 2+ accounts
-      if (group.length >= 2) {
-        processed.add(account1.id);
+    // --- Address-based clustering ---
+    if (mode === 'address' || mode === 'both') {
+      // Build a map of normalized address -> accounts (only unprocessed accounts)
+      const addressMap = new Map<string, typeof accountsWithLocations>();
+
+      for (const acc of accountsWithLocations) {
+        if (processed.has(acc.id)) continue;
+        // Use the first location's address for clustering
+        const loc = acc.locations[0];
+        if (!loc) continue;
+
+        const key = normalizeAddress({
+          city: loc.city,
+          state: loc.state,
+          zip: loc.zip_code,
+          address: loc.address_line1,
+        });
+
+        // Only cluster if we have at least city+state or zip
+        if (!key || key === '|' || key.replace(/\|/g, '').length < 3) continue;
+
+        const existing = addressMap.get(key) || [];
+        existing.push(acc);
+        addressMap.set(key, existing);
+      }
+
+      for (const [addressKey, accs] of addressMap) {
+        if (accs.length < 2) continue;
+        for (const acc of accs) processed.add(acc.id);
+        // Display a readable label from the address parts
+        const parts = addressKey.split('|').filter(Boolean);
+        const label = parts.join(', ') || 'Same address';
         groups.push({
-          name: account1.name, // Use first account's name as group name
-          accounts: group,
-          similarityScore: minSimilarity,
+          name: `Address match: ${label}`,
+          accounts: accs,
+          similarityScore: 0.85, // Address-based matches get a fixed high score
+          matchType: 'address',
         });
       }
     }
 
     // Sort groups by similarity score (probability) descending - highest probability first
     groups.sort((a, b) => {
-      // Primary sort: similarity score (probability) - highest first
       if (b.similarityScore !== a.similarityScore) {
         return b.similarityScore - a.similarityScore;
       }
-      // Secondary sort: number of accounts - more accounts first
       return b.accounts.length - a.accounts.length;
     });
 

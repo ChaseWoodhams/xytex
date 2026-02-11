@@ -11,17 +11,22 @@ interface LocationContactsProps {
   showModal?: boolean;
   onModalClose?: () => void;
   hideHeader?: boolean;
+  onContactsLoaded?: (count: number) => void;
 }
 
 const CONTACT_ROLES: { value: ContactRole; label: string }[] = [
-  { value: 'primary', label: 'Primary' },
+  { value: 'primary', label: 'Primary Contact' },
+  { value: 'clinic_manager', label: 'Clinic Manager' },
+  { value: 'lab_director', label: 'Lab Director' },
+  { value: 'nurse_coordinator', label: 'Nurse Coordinator' },
+  { value: 'front_desk', label: 'Front Desk' },
   { value: 'billing', label: 'Billing' },
-  { value: 'clinical', label: 'Clinical' },
+  { value: 'clinical', label: 'Clinical Staff' },
   { value: 'administrative', label: 'Administrative' },
   { value: 'other', label: 'Other' },
 ];
 
-export default function LocationContacts({ locationId, initialShowForm = false, showModal = false, onModalClose, hideHeader = false }: LocationContactsProps) {
+export default function LocationContacts({ locationId, initialShowForm = false, showModal = false, onModalClose, hideHeader = false, onContactsLoaded }: LocationContactsProps) {
   const router = useRouter();
   const [contacts, setContacts] = useState<LocationContact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +77,7 @@ export default function LocationContacts({ locationId, initialShowForm = false, 
       }
       const data = await response.json();
       setContacts(data);
+      onContactsLoaded?.(data.length);
     } catch (err: any) {
       setError(err.message || 'Failed to load contacts');
     } finally {
@@ -278,7 +284,7 @@ export default function LocationContacts({ locationId, initialShowForm = false, 
 
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-navy-700 mb-1">
-                Job Title
+                Position in Clinic
               </label>
               <input
                 type="text"
@@ -506,7 +512,7 @@ export default function LocationContacts({ locationId, initialShowForm = false, 
 
             <div>
               <label htmlFor="modal-title" className="block text-sm font-medium text-navy-700 mb-1">
-                Job Title
+                Position in Clinic
               </label>
               <input
                 type="text"

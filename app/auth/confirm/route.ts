@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       if (role && (role === 'admin' || role === 'bd_team')) {
         redirectPath = '/admin';
       } else if (next === '/' || next === '/account') {
-        redirectPath = '/browse-donors';
+        redirectPath = '/admin';
       }
 
       const redirectUrl = new URL(redirectPath, request.url);

@@ -50,12 +50,12 @@ export default function LoginForm() {
           .eq('id', data.user.id)
           .single();
         
-        // Redirect admin and bd_team users to CRM, others to browse-donors
+        // Redirect admin and bd_team users to CRM, others to account (internal-only app)
         const profile = userProfile as { role: UserRole } | null;
         if (profile && (profile.role === 'admin' || profile.role === 'bd_team')) {
           router.push("/admin");
         } else {
-          router.push("/browse-donors");
+          router.push("/account");
         }
         router.refresh();
       }

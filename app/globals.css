@@ -373,6 +373,14 @@ a {
   border-color: var(--navy-300);
 }
 
+.btn-outline {
+  background: transparent;
+  color: var(--navy-800);
+  /* Do not set border-color so Tailwind border utilities can override */
+  border-width: 2px;
+  border-style: solid;
+}
+
 .btn-white {
   background: white;
   color: var(--navy-800);

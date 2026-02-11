@@ -62,10 +62,10 @@ export default async function AccountPage() {
                       </p>
                     </div>
                     <Link
-                      href="/browse-donors"
+                      href="/admin/marketing-tools?tab=donors"
                       className="btn btn-primary w-full text-center"
                     >
-                      Browse Donors
+                      Marketing Donors
                       <ArrowRight className="w-5 h-5" />
                     </Link>
                   </div>

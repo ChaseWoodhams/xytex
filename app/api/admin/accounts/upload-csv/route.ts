@@ -127,6 +127,8 @@ export async function POST(request: Request) {
       success: result.success,
       uploadId: uploadRecord.id,
       created: result.created.length,
+      accountCount: result.accountCount,
+      locationCount: result.locationCount,
       errors: result.errors,
     }, { status: result.created.length > 0 ? 201 : 400 });
   } catch (error: any) {

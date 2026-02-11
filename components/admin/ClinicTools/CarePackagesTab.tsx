@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Package, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Plus, Package, Loader2, ExternalLink } from "lucide-react";
 import type {
   Account,
   Location,
@@ -31,13 +32,6 @@ export default function CarePackagesTab() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [selectedLocationId, setSelectedLocationId] = useState<string>("");
-  
-  // #region agent log
-  // Track selectedAccountId changes
-  useEffect(() => {
-    fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:33',message:'selectedAccountId changed',data:{selectedAccountId,accountsLoaded:accounts.length},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'F'})}).catch(()=>{});
-  }, [selectedAccountId, accounts.length]);
-  // #endregion
   const [accountSearch, setAccountSearch] = useState<string>("");
   const [locationSearch, setLocationSearch] = useState<string>("");
   const [showAccountSuggestions, setShowAccountSuggestions] = useState(false);
@@ -68,25 +62,13 @@ export default function CarePackagesTab() {
       try {
         // Fetch all accounts without pagination (simpler and more efficient)
         const res = await fetch("/api/admin/accounts");
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:69',message:'Account fetch response',data:{status:res?.ok,statusText:res?.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'F'})}).catch(()=>{});
-        // #endregion
         if (!res.ok) {
-          // #region agent log
-          fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:72',message:'Account fetch failed',data:{status:res?.status},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'F'})}).catch(()=>{});
-          // #endregion
           return;
         }
         const data = await res.json();
         const list: Account[] = Array.isArray(data) ? data : data.accounts;
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:77',message:'Accounts loaded',data:{count:list?.length,accounts:list?.slice(0,3).map(a=>({id:a.id,name:a.name}))},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'F'})}).catch(()=>{});
-        // #endregion
         setAccounts(list || []);
       } catch (err) {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:81',message:'Account load error',data:{error:err?.toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'F'})}).catch(()=>{});
-        // #endregion
         console.error("[CarePackagesTab] Error loading accounts", err);
       }
     }
@@ -98,24 +80,12 @@ export default function CarePackagesTab() {
       try {
         // Load all locations, not just for selected account, to enable better search
         const res = await fetch("/api/admin/locations");
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:78',message:'Location fetch response status',data:{status:res?.ok,statusText:res?.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         if (!res.ok) {
-          // #region agent log
-          fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:81',message:'Location fetch failed',data:{status:res?.status},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
           return;
         }
         const data: Location[] = await res.json();
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:85',message:'Locations loaded',data:{count:data?.length,locations:data?.slice(0,3).map(l=>({id:l.id,name:l.name,account_id:l.account_id}))},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         setLocations(data || []);
       } catch (err) {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:88',message:'Location load error',data:{error:err?.toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         console.error("[CarePackagesTab] Error loading locations", err);
       }
     }
@@ -133,36 +103,21 @@ export default function CarePackagesTab() {
   }, [accounts, accountSearch]);
 
   const filteredLocations = useMemo(() => {
-    // If account is selected, filter by account first, then by search
     let filtered = locations;
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:101',message:'Filtering locations start',data:{totalLocations:locations.length,selectedAccountId,locationSearch},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
     if (selectedAccountId) {
       filtered = filtered.filter((loc) => loc.account_id === selectedAccountId);
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:104',message:'After account filter',data:{filteredCount:filtered.length,accountId:selectedAccountId},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
     }
     if (!locationSearch.trim()) {
-      const result = filtered.sort((a, b) => a.name.localeCompare(b.name));
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:109',message:'Filtered locations (no search)',data:{count:result.length},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-      return result;
+      return filtered.sort((a, b) => a.name.localeCompare(b.name));
     }
     const searchLower = locationSearch.toLowerCase();
-    const result = filtered
+    return filtered
       .filter(
         (loc) =>
           loc.name.toLowerCase().includes(searchLower) ||
           (loc.city && loc.city.toLowerCase().includes(searchLower))
       )
       .sort((a, b) => a.name.localeCompare(b.name));
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:118',message:'Filtered locations (with search)',data:{count:result.length,searchTerm:locationSearch},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
-    return result;
   }, [locations, locationSearch, selectedAccountId]);
 
   const selectedAccount = accounts.find((acc) => acc.id === selectedAccountId);
@@ -303,13 +258,22 @@ export default function CarePackagesTab() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-heading font-semibold text-navy-900 mb-1">
-          Care Packages
-        </h2>
-        <p className="text-navy-600">
-          Request care packages to be sent to clinic locations or custom addresses.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-heading font-semibold text-navy-900 mb-1">
+            Care Packages
+          </h2>
+          <p className="text-navy-600">
+            Request care packages to be sent to clinic locations or custom addresses.
+          </p>
+        </div>
+        <Link
+          href="/admin/marketing-tools?tab=care-packages"
+          className="inline-flex items-center gap-2 text-sm font-medium text-gold-700 hover:text-gold-800"
+        >
+          <ExternalLink className="w-4 h-4" />
+          View in Marketing (fulfillment status)
+        </Link>
       </div>
 
       <form
@@ -373,13 +337,6 @@ export default function CarePackagesTab() {
               placeholder="Type to search accounts..."
               className="w-full rounded-lg border border-navy-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500 bg-white"
             />
-            {/* #region agent log */}
-            {(() => {
-              const shouldShow = showAccountSuggestions && filteredAccounts.length > 0;
-              fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:342',message:'Account suggestions render check',data:{shouldShow,showAccountSuggestions,filteredAccountsCount:filteredAccounts.length,accountSearch},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'F'})}).catch(()=>{});
-              return null;
-            })()}
-            {/* #endregion */}
             {showAccountSuggestions && filteredAccounts.length > 0 && (
               <div className="absolute z-10 w-full mt-1 bg-white border border-navy-200 rounded-lg shadow-lg max-h-60 overflow-auto">
                 {filteredAccounts.map((acc) => (
@@ -387,15 +344,9 @@ export default function CarePackagesTab() {
                     key={acc.id}
                     type="button"
                     onClick={() => {
-                      // #region agent log
-                      fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:316',message:'Account clicked',data:{accountId:acc.id,accountName:acc.name},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'F'})}).catch(()=>{});
-                      // #endregion
                       setSelectedAccountId(acc.id);
-                      setAccountSearch(acc.name); // Keep the name visible
+                      setAccountSearch(acc.name);
                       setShowAccountSuggestions(false);
-                      // #region agent log
-                      fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:320',message:'After account selection',data:{accountId:acc.id},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'F'})}).catch(()=>{});
-                      // #endregion
                     }}
                     className="w-full text-left px-3 py-2 text-sm hover:bg-navy-50 focus:bg-navy-50 focus:outline-none"
                   >
@@ -421,11 +372,7 @@ export default function CarePackagesTab() {
               type="text"
               value={locationSearch}
               onChange={(e) => {
-                const value = e.target.value;
-                // #region agent log
-                fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:361',message:'Location search changed',data:{value,selectedAccountId,filteredLocationsCount:filteredLocations.length},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
-                // #endregion
-                setLocationSearch(value);
+                setLocationSearch(e.target.value);
                 setShowLocationSuggestions(true);
                 // Clear selection when user starts typing
                 if (selectedLocationId) {
@@ -433,15 +380,10 @@ export default function CarePackagesTab() {
                 }
               }}
               onFocus={(e) => {
-                // #region agent log
-                fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:369',message:'Location input focused',data:{selectedAccountId,selectedLocationId,filteredLocationsCount:filteredLocations.length,showLocationSuggestions:true},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'C'})}).catch(()=>{});
-                // #endregion
                 setShowLocationSuggestions(true);
-                // When focused, if there's a selected location, clear it to allow fresh search
                 if (selectedLocation) {
                   setLocationSearch("");
                   setSelectedLocationId("");
-                  // Clear the input value so user can type immediately
                   e.currentTarget.value = "";
                 }
               }}
@@ -463,39 +405,21 @@ export default function CarePackagesTab() {
               disabled={!selectedAccountId}
               className="w-full rounded-lg border border-navy-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500 bg-white disabled:bg-navy-50 disabled:text-navy-400 disabled:cursor-not-allowed"
             />
-            {/* #region agent log */}
-            {(() => {
-              const shouldShow = showLocationSuggestions && selectedAccountId && filteredLocations.length > 0;
-              fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:430',message:'Checking location suggestions render',data:{shouldShow,showLocationSuggestions,selectedAccountId,filteredLocationsCount:filteredLocations.length,locationSearch},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'E'})}).catch(()=>{});
-              return null;
-            })()}
-            {/* #endregion */}
             {showLocationSuggestions &&
               selectedAccountId &&
               filteredLocations.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-navy-200 rounded-lg shadow-lg max-h-60 overflow-auto">
-                  {/* #region agent log */}
-                  {/* Render logged separately */}
-                  {/* #endregion */}
                   {filteredLocations.map((loc) => (
                     <button
                       key={loc.id}
                       type="button"
                       onClick={() => {
-                        // #region agent log
-                        fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:405',message:'Location clicked',data:{locationId:loc.id,locationName:loc.name},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'D'})}).catch(()=>{});
-                        // #endregion
                         setSelectedLocationId(loc.id);
                         const locationText = `${loc.name}${loc.city ? ` – ${loc.city}` : ""}`;
-                        setLocationSearch(locationText); // Keep the name visible
+                        setLocationSearch(locationText);
                         setShowLocationSuggestions(false);
                       }}
-                      onMouseDown={(e) => {
-                        // #region agent log
-                        fetch('http://127.0.0.1:7243/ingest/11f82521-220b-46dc-b360-a5e4085b9b5b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CarePackagesTab.tsx:411',message:'Location button mousedown',data:{locationId:loc.id},timestamp:Date.now(),sessionId:'debug-session',runId:'initial',hypothesisId:'D'})}).catch(()=>{});
-                        // #endregion
-                        e.preventDefault(); // Prevent blur from firing before click
-                      }}
+                      onMouseDown={(e) => e.preventDefault()}
                       className="w-full text-left px-3 py-2 text-sm hover:bg-navy-50 focus:bg-navy-50 focus:outline-none"
                     >
                       {loc.name}
@@ -506,23 +430,6 @@ export default function CarePackagesTab() {
                   ))}
                 </div>
               )}
-            {showLocationSuggestions &&
-              selectedAccountId &&
-              filteredLocations.length === 0 &&
-              locationSearch && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-navy-200 rounded-lg shadow-lg px-3 py-2 text-sm text-navy-600">
-                  No locations found
-                </div>
-              )}
-            {/* #region agent log */}
-            {/* Conditional render check */}
-            {showLocationSuggestions && selectedAccountId && (
-              <div style={{display:'none'}}>
-                {/* Force re-render to log */}
-                {/* Logged: showLocationSuggestions={showLocationSuggestions}, selectedAccountId={selectedAccountId}, filteredLocations.length={filteredLocations.length} */}
-              </div>
-            )}
-            {/* #endregion */}
             {showLocationSuggestions &&
               selectedAccountId &&
               filteredLocations.length === 0 &&

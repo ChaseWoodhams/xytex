@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Search, Merge, Loader2, Building2, MapPin, AlertTriangle, CheckCircle2, Eye, X, FileText, Clock, StickyNote, Phone, Mail } from "lucide-react";
 import type { Account, Location, Agreement, Activity, Note } from "@/lib/supabase/types";
+import { showToast } from "@/components/shared/toast";
 
 interface AccountWithLocation extends Account {
   locations?: Array<{
@@ -24,11 +25,12 @@ interface SimilarityGroup {
 export default function AccountMergeTool() {
   const [searching, setSearching] = useState(false);
   const [groups, setGroups] = useState<SimilarityGroup[]>([]);
-  const [merging, setMerging] = useState<string | null>(null); // Track which group is being merged
+  const [merging, setMerging] = useState<string | null>(null);
   const [mergeResult, setMergeResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [minSimilarity, setMinSimilarity] = useState(0.7); // Filter by minimum similarity score
-  const [selectedAccounts, setSelectedAccounts] = useState<Map<number, Set<string>>>(new Map()); // Map of groupIndex -> Set of account IDs
-  const [viewingAccount, setViewingAccount] = useState<string | null>(null); // Account ID being viewed
+  const [minSimilarity, setMinSimilarity] = useState(0.7);
+  const [selectedAccounts, setSelectedAccounts] = useState<Map<number, Set<string>>>(new Map());
+  const [viewingAccount, setViewingAccount] = useState<string | null>(null);
+  const [matchMode, setMatchMode] = useState<'name' | 'address' | 'both'>('name');
   const [accountDetails, setAccountDetails] = useState<{
     account: Account;
     locations: Location[];
@@ -45,7 +47,7 @@ export default function AccountMergeTool() {
     setMergeResult(null);
 
     try {
-      const response = await fetch('/api/admin/data-tools/find-similar-accounts');
+      const response = await fetch(`/api/admin/data-tools/find-similar-accounts?mode=${matchMode}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         throw new Error(errorData.error || `Failed to find similar accounts (${response.status})`);
@@ -55,7 +57,7 @@ export default function AccountMergeTool() {
       setGroups(data.groups || []);
     } catch (error: any) {
       console.error('Error finding similar accounts:', error);
-      alert(`Error: ${error.message}`);
+      showToast(error.message || 'Failed to find similar accounts', 'error');
     } finally {
       setSearching(false);
     }
@@ -102,11 +104,7 @@ export default function AccountMergeTool() {
     const accountIdsToMerge = Array.from(groupSelected);
     
     if (accountIdsToMerge.length < 2) {
-      alert('Please select at least 2 accounts to merge');
-      return;
-    }
-
-    if (!confirm(`Are you sure you want to merge ${accountIdsToMerge.length} selected accounts? This will combine all their locations into a single multi-location account.`)) {
+      showToast('Please select at least 2 accounts to merge', 'error');
       return;
     }
 
@@ -181,6 +179,7 @@ export default function AccountMergeTool() {
   };
 
   return (
+    <>
     <div className="bg-white rounded-xl shadow-md overflow-hidden">
       <div className="p-6 border-b border-navy-100">
         <div className="flex items-center justify-between">
@@ -193,23 +192,40 @@ export default function AccountMergeTool() {
               Find single-location accounts with similar names and merge them into multi-location accounts
             </p>
           </div>
-          <button
-            onClick={findSimilarAccounts}
-            disabled={searching}
-            className="btn btn-primary flex items-center gap-2"
-          >
-            {searching ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Searching...
-              </>
-            ) : (
-              <>
-                <Search className="w-4 h-4" />
-                Find Similar Accounts
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="flex border border-navy-200 rounded-lg overflow-hidden">
+              {(['name', 'address', 'both'] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMatchMode(m)}
+                  className={`px-3 py-2 text-xs font-medium transition-colors ${
+                    matchMode === m
+                      ? 'bg-gold-600 text-white'
+                      : 'bg-white text-navy-600 hover:bg-navy-50'
+                  }`}
+                >
+                  {m === 'name' ? 'By Name' : m === 'address' ? 'By Address' : 'Both'}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={findSimilarAccounts}
+              disabled={searching}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              {searching ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Searching...
+                </>
+              ) : (
+                <>
+                  <Search className="w-4 h-4" />
+                  Find Similar Accounts
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -347,7 +363,6 @@ export default function AccountMergeTool() {
                         const isSelected = groupSelected.has(account.id);
                         // Debug: log account data to help diagnose
                         if (process.env.NODE_ENV === 'development') {
-                          console.log('Account data:', account.id, account.name, 'Locations:', account.locations);
                         }
                         return (
                           <div
@@ -451,7 +466,6 @@ export default function AccountMergeTool() {
         )}
       </div>
     </div>
-  );
 
       {/* Account Details Modal */}
       {viewingAccount && (
@@ -652,6 +666,8 @@ export default function AccountMergeTool() {
           </div>
         </div>
       )}
+    </>
+  );
 }
 
 

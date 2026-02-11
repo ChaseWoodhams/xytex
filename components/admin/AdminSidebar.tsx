@@ -75,8 +75,7 @@ export default function AdminSidebar({ isOpen: controlledIsOpen, onClose }: Admi
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                 pathname?.startsWith("/admin/clinic-tools") || 
                 pathname?.startsWith("/admin/accounts") || 
-                pathname?.startsWith("/admin/invitations") || 
-                pathname?.startsWith("/admin/data-tools")
+                pathname?.startsWith("/admin/invitations")
                   ? "bg-gold-600 text-white"
                   : "hover:bg-navy-800"
               }`}

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import DonorForm from "./DonorForm";
 import DonorDetailView from "./DonorDetailView";
+import { showToast } from "@/components/shared/toast";
 
 export default function DonorsTab() {
   const router = useRouter();
@@ -74,10 +75,6 @@ export default function DonorsTab() {
   }, [fetchDonors]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this donor?")) {
-      return;
-    }
-
     setDeletingId(id);
     try {
       const response = await fetch(`/api/admin/marketing-donors/${id}`, {
@@ -89,9 +86,10 @@ export default function DonorsTab() {
       }
 
       await fetchDonors();
-    } catch (error) {
+      showToast("Donor deleted.", "success");
+    } catch (error: any) {
       console.error("Error deleting donor:", error);
-      alert("Failed to delete donor");
+      showToast(error.message || "Failed to delete donor", "error");
     } finally {
       setDeletingId(null);
     }

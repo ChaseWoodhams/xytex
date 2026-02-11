@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, Merge, MapPin, Plus, Minus, Loader2, User, RefreshCw, Building2, FileText, Upload, Trash2, Edit } from "lucide-react";
+import Link from "next/link";
+import { Clock, Merge, MapPin, Plus, Minus, Loader2, User, RefreshCw, Building2, FileText, Upload, Trash2, Edit, ExternalLink } from "lucide-react";
 
 interface ChangeLogEntry {
   id: string;
@@ -89,6 +90,13 @@ export default function ChangeLog() {
       hour: 'numeric',
       minute: '2-digit',
     });
+  };
+
+  const getEntityLink = (entry: ChangeLogEntry): string | null => {
+    if (!entry.entity_id) return null;
+    if (entry.entity_type === 'account') return `/admin/accounts/${entry.entity_id}`;
+    if (entry.entity_type === 'location') return `/admin/locations/${entry.entity_id}`;
+    return null;
   };
 
   const formatDetails = (details: Record<string, any> | null): string | null => {
@@ -200,11 +208,22 @@ export default function ChangeLog() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h3 className="font-semibold text-navy-900">{actionLabel}</h3>
-                      {entry.entity_name && (
-                        <span className="text-sm text-navy-600">
-                          • {entry.entity_name}
-                        </span>
-                      )}
+                      {entry.entity_name && (() => {
+                        const link = getEntityLink(entry);
+                        return link ? (
+                          <Link
+                            href={link}
+                            className="text-sm text-gold-600 hover:text-gold-700 font-medium inline-flex items-center gap-1"
+                          >
+                            {entry.entity_name}
+                            <ExternalLink className="w-3 h-3" />
+                          </Link>
+                        ) : (
+                          <span className="text-sm text-navy-600">
+                            • {entry.entity_name}
+                          </span>
+                        );
+                      })()}
                     </div>
                     <p className="text-sm text-navy-700 mb-2">{entry.description}</p>
                     {detailsText && (

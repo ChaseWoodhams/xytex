@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Location, Agreement, LocationUpload } from "@/lib/supabase/types";
-import { MapPin, Plus, Edit, Trash2, Upload, FileSpreadsheet, Minus } from "lucide-react";
+import { MapPin, Plus, Edit, Trash2, Upload, FileSpreadsheet, Minus, Search, Loader2, X, ArrowRight, Check, Pencil } from "lucide-react";
+import { showToast } from "@/components/shared/toast";
 import LocationForm from "./LocationForm";
 import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
 import LocationCsvUpload from "./LocationCsvUpload";
@@ -16,6 +17,17 @@ interface LocationsListProps {
   locations: Location[];
   locationAgreementsMap: Map<string, Agreement[]>;
   isMultiLocation?: boolean;
+}
+
+interface SearchResult {
+  id: string;
+  account_id: string;
+  name: string;
+  address_line1?: string;
+  city?: string;
+  state?: string;
+  account_name: string;
+  account_type: string;
 }
 
 export default function LocationsList({ accountId, locations, locationAgreementsMap, isMultiLocation = false }: LocationsListProps) {
@@ -30,7 +42,92 @@ export default function LocationsList({ accountId, locations, locationAgreements
   const [locationPendingContract, setLocationPendingContract] = useState<Map<string, boolean>>(
     new Map(locations.map(loc => [loc.id, loc.pending_contract_sent]))
   );
+  // Add Existing Location state
+  const [showAddExisting, setShowAddExisting] = useState(false);
+  const [addExistingQuery, setAddExistingQuery] = useState("");
+  const [addExistingResults, setAddExistingResults] = useState<SearchResult[]>([]);
+  const [addExistingSearching, setAddExistingSearching] = useState(false);
+  const [addExistingSelected, setAddExistingSelected] = useState<Set<string>>(new Set());
+  const [addExistingProcessing, setAddExistingProcessing] = useState(false);
+  // Inline edit state
+  const [inlineEdit, setInlineEdit] = useState<{ locationId: string; field: string; value: string } | null>(null);
+  const [isSavingInline, setIsSavingInline] = useState(false);
+  // Bulk edit state
+  const [bulkEditMode, setBulkEditMode] = useState(false);
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
+  const [bulkField, setBulkField] = useState<string>("status");
+  const [bulkValue, setBulkValue] = useState<string>("");
+  const [isBulkSaving, setIsBulkSaving] = useState(false);
   const router = useRouter();
+
+  const saveInlineEdit = async () => {
+    if (!inlineEdit) return;
+    setIsSavingInline(true);
+    try {
+      const response = await fetch(`/api/admin/locations/${inlineEdit.locationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [inlineEdit.field]: inlineEdit.value.trim() || null }),
+      });
+      if (!response.ok) throw new Error('Failed to update');
+      showToast("Updated successfully", "success");
+      setInlineEdit(null);
+      router.refresh();
+    } catch (error: any) {
+      showToast(error.message || "Failed to save", "error");
+    } finally {
+      setIsSavingInline(false);
+    }
+  };
+
+  const handleBulkApply = async () => {
+    if (bulkSelected.size === 0 || !bulkValue) return;
+    setIsBulkSaving(true);
+    let successCount = 0;
+    const errors: string[] = [];
+
+    for (const locationId of bulkSelected) {
+      try {
+        const response = await fetch(`/api/admin/locations/${locationId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [bulkField]: bulkField === 'pending_contract_sent' ? bulkValue === 'true' : bulkValue }),
+        });
+        if (!response.ok) throw new Error('Failed');
+        successCount++;
+      } catch {
+        errors.push(locationId);
+      }
+    }
+
+    if (successCount > 0) {
+      showToast(`Updated ${successCount} location${successCount !== 1 ? 's' : ''}${errors.length > 0 ? ` (${errors.length} failed)` : ''}`, "success");
+      setBulkEditMode(false);
+      setBulkSelected(new Set());
+      setBulkValue("");
+      router.refresh();
+    } else {
+      showToast("Failed to update locations", "error");
+    }
+    setIsBulkSaving(false);
+  };
+
+  const toggleBulkSelect = (locationId: string) => {
+    setBulkSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(locationId)) next.delete(locationId);
+      else next.add(locationId);
+      return next;
+    });
+  };
+
+  const toggleBulkSelectAll = () => {
+    if (bulkSelected.size === locations.length) {
+      setBulkSelected(new Set());
+    } else {
+      setBulkSelected(new Set(locations.map(l => l.id)));
+    }
+  };
 
   // Fetch upload history
   useEffect(() => {
@@ -81,15 +178,73 @@ export default function LocationsList({ accountId, locations, locationAgreements
       }
 
       const data = await response.json();
-      alert(`Successfully created new single-location account "${data.accountName}" with the removed location.`);
+      showToast(`Successfully created new single-location account "${data.accountName}" with the removed location.`, "success");
       router.refresh();
     } catch (error: any) {
       console.error('Error removing location:', error);
-      alert(`Failed to remove location: ${error.message}`);
+      showToast(`Failed to remove location: ${error.message}`, "error");
     } finally {
       setIsRemoving(false);
       setRemoveLocationId(null);
     }
+  };
+
+  // Add Existing Location helpers
+  const searchExistingLocations = async () => {
+    if (!addExistingQuery.trim()) return;
+    setAddExistingSearching(true);
+    setAddExistingResults([]);
+    try {
+      const response = await fetch(
+        `/api/admin/data-tools/search-single-locations?q=${encodeURIComponent(addExistingQuery)}`
+      );
+      if (!response.ok) throw new Error("Search failed");
+      const data = await response.json();
+      // Only show single-location results (not already part of this account)
+      const filtered = (data.locations || []).filter(
+        (loc: SearchResult) =>
+          loc.account_type === "single_location" && loc.account_id !== accountId
+      );
+      setAddExistingResults(filtered);
+    } catch (error) {
+      console.error("Error searching locations:", error);
+    } finally {
+      setAddExistingSearching(false);
+    }
+  };
+
+  const handleAddExistingLocations = async () => {
+    if (addExistingSelected.size === 0) return;
+    setAddExistingProcessing(true);
+    let successCount = 0;
+    const errors: string[] = [];
+    for (const locationId of addExistingSelected) {
+      try {
+        const response = await fetch("/api/admin/data-tools/add-location-to-multi", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ locationId, targetAccountId: accountId }),
+        });
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || "Failed");
+        }
+        successCount++;
+      } catch (error: any) {
+        errors.push(error.message);
+      }
+    }
+    if (successCount > 0) {
+      showToast(`Successfully added ${successCount} location${successCount !== 1 ? "s" : ""} to this account.${errors.length > 0 ? ` ${errors.length} failed.` : ""}`, "success");
+      setShowAddExisting(false);
+      setAddExistingSelected(new Set());
+      setAddExistingResults([]);
+      setAddExistingQuery("");
+      router.refresh();
+    } else {
+      showToast(`Failed to add locations: ${errors.join(", ")}`, "error");
+    }
+    setAddExistingProcessing(false);
   };
 
   // Update location pending contract status
@@ -114,7 +269,7 @@ export default function LocationsList({ accountId, locations, locationAgreements
       router.refresh();
     } catch (error: any) {
       console.error('Error updating pending contract status:', error);
-      alert(`Failed to update pending contract status: ${error.message}`);
+      showToast(`Failed to update pending contract status: ${error.message}`, "error");
     } finally {
       setUpdatingPendingContract(prev => {
         const newSet = new Set(prev);
@@ -143,22 +298,120 @@ export default function LocationsList({ accountId, locations, locationAgreements
           Locations
         </h2>
         <div className="flex gap-3">
-          <button
-            onClick={() => setShowCsvUpload(true)}
-            className="btn btn-outline flex items-center gap-2"
-          >
-            <Upload className="w-4 h-4" />
-            Import CSV
-          </button>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="btn btn-primary"
-          >
-            <Plus className="w-5 h-5" />
-            Add Location
-          </button>
+          {locations.length > 1 && (
+            <button
+              onClick={() => {
+                setBulkEditMode(!bulkEditMode);
+                if (bulkEditMode) { setBulkSelected(new Set()); setBulkValue(""); }
+              }}
+              className={`btn ${bulkEditMode ? 'btn-secondary' : 'btn-outline'} flex items-center gap-2`}
+            >
+              <Edit className="w-4 h-4" />
+              {bulkEditMode ? 'Cancel Bulk' : 'Bulk Edit'}
+            </button>
+          )}
+          {isMultiLocation && !bulkEditMode && (
+            <button
+              onClick={() => setShowAddExisting(true)}
+              className="btn btn-outline flex items-center gap-2"
+            >
+              <ArrowRight className="w-4 h-4" />
+              Add Existing
+            </button>
+          )}
+          {!bulkEditMode && (
+            <button
+              onClick={() => setShowCsvUpload(true)}
+              className="btn btn-outline flex items-center gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Import CSV
+            </button>
+          )}
+          {!bulkEditMode && (
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="btn btn-primary"
+            >
+              <Plus className="w-5 h-5" />
+              Add Location
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Bulk Edit Toolbar */}
+      {bulkEditMode && locations.length > 0 && (
+        <div className="mb-4 p-4 bg-navy-50 rounded-lg border border-navy-200">
+          <div className="flex items-center gap-3 mb-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={bulkSelected.size === locations.length}
+                onChange={toggleBulkSelectAll}
+                className="w-4 h-4 text-gold-600 border-navy-300 rounded focus:ring-gold-500"
+              />
+              <span className="text-sm font-medium text-navy-700">
+                Select All ({bulkSelected.size}/{locations.length})
+              </span>
+            </label>
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="block text-xs font-medium text-navy-600 mb-1">Field to Update</label>
+              <select
+                value={bulkField}
+                onChange={(e) => { setBulkField(e.target.value); setBulkValue(""); }}
+                className="px-3 py-2 border border-navy-200 rounded-lg text-sm focus:ring-2 focus:ring-gold-500 focus:outline-none"
+              >
+                <option value="status">Status</option>
+                <option value="country">Country</option>
+                <option value="pending_contract_sent">Contract Sent</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-navy-600 mb-1">New Value</label>
+              {bulkField === 'status' ? (
+                <select
+                  value={bulkValue}
+                  onChange={(e) => setBulkValue(e.target.value)}
+                  className="px-3 py-2 border border-navy-200 rounded-lg text-sm focus:ring-2 focus:ring-gold-500 focus:outline-none"
+                >
+                  <option value="">Select...</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              ) : bulkField === 'pending_contract_sent' ? (
+                <select
+                  value={bulkValue}
+                  onChange={(e) => setBulkValue(e.target.value)}
+                  className="px-3 py-2 border border-navy-200 rounded-lg text-sm focus:ring-2 focus:ring-gold-500 focus:outline-none"
+                >
+                  <option value="">Select...</option>
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={bulkValue}
+                  onChange={(e) => setBulkValue(e.target.value)}
+                  placeholder="Enter value..."
+                  className="px-3 py-2 border border-navy-200 rounded-lg text-sm focus:ring-2 focus:ring-gold-500 focus:outline-none"
+                />
+              )}
+            </div>
+            <button
+              onClick={handleBulkApply}
+              disabled={bulkSelected.size === 0 || !bulkValue || isBulkSaving}
+              className="btn btn-primary flex items-center gap-2 disabled:opacity-50"
+            >
+              {isBulkSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              Apply to {bulkSelected.size} Location{bulkSelected.size !== 1 ? 's' : ''}
+            </button>
+          </div>
+        </div>
+      )}
 
       {locations.length === 0 ? (
         <div className="text-center py-12">
@@ -176,12 +429,22 @@ export default function LocationsList({ accountId, locations, locationAgreements
             return (
               <div
                 key={location.id}
-                className="border border-navy-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                className={`border rounded-lg p-4 hover:shadow-md transition-shadow ${bulkEditMode && bulkSelected.has(location.id) ? 'border-gold-400 bg-gold-50/30' : 'border-navy-200'}`}
               >
                 <div className="flex items-start justify-between">
+                  {bulkEditMode && (
+                    <div className="flex items-center mr-3 pt-1" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={bulkSelected.has(location.id)}
+                        onChange={() => toggleBulkSelect(location.id)}
+                        className="w-4 h-4 text-gold-600 border-navy-300 rounded focus:ring-gold-500"
+                      />
+                    </div>
+                  )}
                   <div
                     className="flex-1 cursor-pointer"
-                    onClick={() => router.push(`/admin/locations/${location.id}`)}
+                    onClick={() => bulkEditMode ? toggleBulkSelect(location.id) : router.push(`/admin/locations/${location.id}`)}
                   >
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <Link
@@ -260,8 +523,23 @@ export default function LocationsList({ accountId, locations, locationAgreements
                           .join(", ")}
                       </p>
                     )}
-                    {location.phone && (
-                      <p>
+                    {/* Phone - inline editable */}
+                    {inlineEdit?.locationId === location.id && inlineEdit.field === 'phone' ? (
+                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="tel"
+                          value={inlineEdit.value}
+                          onChange={(e) => setInlineEdit({ ...inlineEdit, value: e.target.value })}
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveInlineEdit(); if (e.key === 'Escape') setInlineEdit(null); }}
+                          className="px-2 py-0.5 border border-gold-400 rounded text-sm w-40 focus:outline-none focus:ring-1 focus:ring-gold-500"
+                          autoFocus
+                          disabled={isSavingInline}
+                        />
+                        <button onClick={saveInlineEdit} disabled={isSavingInline} className="p-0.5 text-green-600 hover:bg-green-50 rounded"><Check className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => setInlineEdit(null)} className="p-0.5 text-navy-500 hover:bg-navy-50 rounded"><X className="w-3.5 h-3.5" /></button>
+                      </div>
+                    ) : location.phone ? (
+                      <p className="group/phone flex items-center gap-1">
                         <a
                           href={`tel:${location.phone}`}
                           onClick={(e) => e.stopPropagation()}
@@ -269,10 +547,29 @@ export default function LocationsList({ accountId, locations, locationAgreements
                         >
                           {location.phone}
                         </a>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setInlineEdit({ locationId: location.id, field: 'phone', value: location.phone || '' }); }}
+                          className="p-0.5 text-navy-400 hover:text-gold-600 opacity-0 group-hover/phone:opacity-100 transition-opacity"
+                        ><Pencil className="w-3 h-3" /></button>
                       </p>
-                    )}
-                    {location.email && (
-                      <p>
+                    ) : null}
+                    {/* Email - inline editable */}
+                    {inlineEdit?.locationId === location.id && inlineEdit.field === 'email' ? (
+                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="email"
+                          value={inlineEdit.value}
+                          onChange={(e) => setInlineEdit({ ...inlineEdit, value: e.target.value })}
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveInlineEdit(); if (e.key === 'Escape') setInlineEdit(null); }}
+                          className="px-2 py-0.5 border border-gold-400 rounded text-sm w-48 focus:outline-none focus:ring-1 focus:ring-gold-500"
+                          autoFocus
+                          disabled={isSavingInline}
+                        />
+                        <button onClick={saveInlineEdit} disabled={isSavingInline} className="p-0.5 text-green-600 hover:bg-green-50 rounded"><Check className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => setInlineEdit(null)} className="p-0.5 text-navy-500 hover:bg-navy-50 rounded"><X className="w-3.5 h-3.5" /></button>
+                      </div>
+                    ) : location.email ? (
+                      <p className="group/email flex items-center gap-1">
                         <a
                           href={`mailto:${location.email}`}
                           onClick={(e) => e.stopPropagation()}
@@ -280,11 +577,16 @@ export default function LocationsList({ accountId, locations, locationAgreements
                         >
                           {location.email}
                         </a>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setInlineEdit({ locationId: location.id, field: 'email', value: location.email || '' }); }}
+                          className="p-0.5 text-navy-400 hover:text-gold-600 opacity-0 group-hover/email:opacity-100 transition-opacity"
+                        ><Pencil className="w-3 h-3" /></button>
                       </p>
-                    )}
+                    ) : null}
                     {location.contact_name && (
-                      <p>
-                        <strong>Contact:</strong> {location.contact_name}
+                      <p className="text-navy-500">
+                        <span className="text-xs bg-navy-100 text-navy-500 px-1 py-0.5 rounded mr-1">Legacy</span>
+                        {location.contact_name}
                         {location.contact_title && ` (${location.contact_title})`}
                       </p>
                     )}
@@ -386,7 +688,7 @@ export default function LocationsList({ accountId, locations, locationAgreements
               router.refresh();
             } catch (error: any) {
               console.error('Error deleting location:', error);
-              alert(`Failed to delete location: ${error.message}`);
+              showToast(`Failed to delete location: ${error.message}`, "error");
               setIsDeleting(false);
               setDeleteLocationId(null);
             }
@@ -426,6 +728,145 @@ export default function LocationsList({ accountId, locations, locationAgreements
             router.refresh();
           }}
         />
+      )}
+
+      {/* Add Existing Location Modal */}
+      {showAddExisting && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-navy-100 flex items-center justify-between bg-gradient-to-r from-navy-900 to-navy-800">
+              <div className="flex items-center gap-3">
+                <ArrowRight className="w-5 h-5 text-gold-400" />
+                <h2 className="text-lg font-heading font-semibold text-white">
+                  Add Existing Single-Location to This Account
+                </h2>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAddExisting(false);
+                  setAddExistingQuery("");
+                  setAddExistingResults([]);
+                  setAddExistingSelected(new Set());
+                }}
+                className="text-navy-300 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 flex-1 overflow-auto space-y-4">
+              <p className="text-sm text-navy-600">
+                Search for single-location accounts to move into this multi-location account. The original single-location account will be deleted and its location added here.
+              </p>
+
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={addExistingQuery}
+                  onChange={(e) => setAddExistingQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") searchExistingLocations(); }}
+                  placeholder="Search by name, address, city, state..."
+                  className="flex-1 px-4 py-2 border border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
+                />
+                <button
+                  onClick={searchExistingLocations}
+                  disabled={addExistingSearching || !addExistingQuery.trim()}
+                  className="btn btn-primary flex items-center gap-2"
+                >
+                  {addExistingSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  Search
+                </button>
+              </div>
+
+              {addExistingResults.length > 0 && (
+                <div className="border border-navy-200 rounded-lg max-h-80 overflow-y-auto">
+                  {addExistingResults.map((loc) => {
+                    const isSelected = addExistingSelected.has(loc.id);
+                    return (
+                      <div
+                        key={loc.id}
+                        onClick={() => {
+                          setAddExistingSelected((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(loc.id)) next.delete(loc.id);
+                            else next.add(loc.id);
+                            return next;
+                          });
+                        }}
+                        className={`p-3 border-b border-navy-100 last:border-b-0 cursor-pointer hover:bg-cream-50 ${
+                          isSelected ? "bg-gold-50 border-l-4 border-l-gold-500" : ""
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {}}
+                            className="mt-1"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-navy-900">{loc.name}</p>
+                            <p className="text-sm text-navy-600">Account: {loc.account_name}</p>
+                            {(loc.address_line1 || loc.city || loc.state) && (
+                              <p className="text-xs text-navy-500 mt-1">
+                                {[loc.address_line1, loc.city, loc.state].filter(Boolean).join(", ")}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {addExistingResults.length === 0 && !addExistingSearching && addExistingQuery && (
+                <div className="text-center py-8 text-navy-500">
+                  <MapPin className="w-10 h-10 mx-auto mb-2 text-navy-300" />
+                  <p>No single-location accounts found matching your search</p>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-navy-100 bg-cream-50 flex items-center justify-between">
+              <p className="text-sm text-navy-600">
+                {addExistingSelected.size > 0
+                  ? `${addExistingSelected.size} location${addExistingSelected.size !== 1 ? "s" : ""} selected`
+                  : "Select locations to add"}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowAddExisting(false);
+                    setAddExistingQuery("");
+                    setAddExistingResults([]);
+                    setAddExistingSelected(new Set());
+                  }}
+                  className="btn btn-outline"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddExistingLocations}
+                  disabled={addExistingSelected.size === 0 || addExistingProcessing}
+                  className="btn btn-primary flex items-center gap-2"
+                >
+                  {addExistingProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      Add {addExistingSelected.size > 0 ? addExistingSelected.size : ""} to Account
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

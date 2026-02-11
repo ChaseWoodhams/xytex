@@ -39,6 +39,8 @@ export default function AccountCsvUpload({
   const [uploadResult, setUploadResult] = useState<{
     success: boolean;
     created: number;
+    accountCount?: number;
+    locationCount?: number;
     errors: string[];
   } | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -122,7 +124,8 @@ export default function AccountCsvUpload({
             normalizedHeader.includes(normalizedField) ||
             normalizedField.includes(normalizedHeader) ||
             // Additional common variations
-            (field.key === 'name' && (normalizedHeader.includes('account') || normalizedHeader.includes('clinic') || normalizedHeader.includes('company'))) ||
+            (field.key === 'parent_org' && (normalizedHeader.includes('parent') || normalizedHeader.includes('group') || normalizedHeader.includes('organization') || normalizedHeader.includes('parentorg'))) ||
+            (field.key === 'name' && (normalizedHeader.includes('account') || normalizedHeader.includes('clinic') || normalizedHeader.includes('company') || normalizedHeader.includes('location') || normalizedHeader.includes('branch'))) ||
             (field.key === 'address_line1' && normalizedHeader.includes('address1')) ||
             (field.key === 'zip_code' && (normalizedHeader.includes('zip') || normalizedHeader.includes('postal'))) ||
             (field.key === 'primary_contact_name' && normalizedHeader.includes('contact')) ||
@@ -205,6 +208,8 @@ export default function AccountCsvUpload({
       setUploadResult({
         success: result.created > 0,
         created: result.created || 0,
+        accountCount: result.accountCount,
+        locationCount: result.locationCount,
         errors: result.errors || [],
       });
       
@@ -250,8 +255,40 @@ export default function AccountCsvUpload({
   const requiredFieldsMapped = Object.values(columnMapping).includes("name");
 
   // Group fields by category for better UX
+  const groupingFields = ACCOUNT_CSV_FIELDS.filter(f => f.group === 'grouping');
   const accountFields = ACCOUNT_CSV_FIELDS.filter(f => f.group === 'account');
   const locationFields = ACCOUNT_CSV_FIELDS.filter(f => f.group === 'location');
+
+  // Check if parent_org grouping is mapped
+  const hasGroupColumn = Object.values(columnMapping).includes('parent_org');
+
+  // Compute grouping stats for preview
+  const getGroupingStats = () => {
+    if (!parsedCsv || !hasGroupColumn) return null;
+    const mappedData = getMappedData();
+    const groups = new Map<string, number>();
+    let ungrouped = 0;
+    for (const row of mappedData) {
+      const key = row.parent_org?.trim();
+      if (key) {
+        groups.set(key, (groups.get(key) || 0) + 1);
+      } else {
+        ungrouped++;
+      }
+    }
+    const multiGroups = Array.from(groups.entries()).filter(([, count]) => count > 1);
+    const singleGroups = Array.from(groups.entries()).filter(([, count]) => count === 1);
+    return {
+      totalRows: mappedData.length,
+      multiLocationAccounts: multiGroups.length,
+      multiLocationRows: multiGroups.reduce((sum, [, count]) => sum + count, 0),
+      singleAccountsFromGroups: singleGroups.length,
+      ungroupedSingles: ungrouped,
+      totalAccounts: multiGroups.length + singleGroups.length + ungrouped,
+      totalLocations: mappedData.length,
+      groups: multiGroups.map(([name, count]) => ({ name, locationCount: count })),
+    };
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -349,7 +386,8 @@ export default function AccountCsvUpload({
                 </h4>
                 <ul className="text-sm text-navy-600 space-y-1">
                   <li>• First row should contain column headers</li>
-                  <li>• Each row will create a new single-location account</li>
+                  <li>• Each row will create a location; by default each row = one single-location account</li>
+                  <li>• <strong>Multi-location support:</strong> Include a &quot;Parent Org&quot; or &quot;Group&quot; column — rows with the same value will be grouped into one multi-location account</li>
                   <li>• At minimum, include a column for account/location name</li>
                   <li>• Common fields: name, address, city, state, zip, phone, email, contact</li>
                   <li>• You&apos;ll be able to map columns in the next step</li>
@@ -450,6 +488,20 @@ export default function AccountCsvUpload({
                               }`}
                             >
                               <option value="">— Select field or skip —</option>
+                              <optgroup label="Grouping (Multi-Location)">
+                                {groupingFields.map((field) => (
+                                  <option
+                                    key={field.key}
+                                    value={field.key}
+                                    disabled={
+                                      Object.values(columnMapping).includes(field.key) &&
+                                      columnMapping[header] !== field.key
+                                    }
+                                  >
+                                    {field.label}
+                                  </option>
+                                ))}
+                              </optgroup>
                               <optgroup label="Account Information">
                                 {accountFields.map((field) => (
                                   <option
@@ -508,18 +560,61 @@ export default function AccountCsvUpload({
           {/* Preview Step */}
           {step === "preview" && parsedCsv && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-navy-900">Preview Import</h3>
-                  <p className="text-sm text-navy-600">
-                    {parsedCsv.data.length} account{parsedCsv.data.length !== 1 ? "s" : ""} will be created
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-navy-600">List Name</p>
-                  <p className="font-semibold text-navy-900">{listName}</p>
-                </div>
-              </div>
+              {(() => {
+                const stats = getGroupingStats();
+                return (
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="font-semibold text-navy-900">Preview Import</h3>
+                      {stats ? (
+                        <div className="text-sm text-navy-600 space-y-1 mt-1">
+                          <p>
+                            <span className="font-semibold text-navy-800">{stats.totalAccounts}</span> account{stats.totalAccounts !== 1 ? "s" : ""} and{" "}
+                            <span className="font-semibold text-navy-800">{stats.totalLocations}</span> location{stats.totalLocations !== 1 ? "s" : ""} will be created
+                          </p>
+                          {stats.multiLocationAccounts > 0 && (
+                            <p className="text-gold-700">
+                              {stats.multiLocationAccounts} multi-location account{stats.multiLocationAccounts !== 1 ? "s" : ""} ({stats.multiLocationRows} locations)
+                            </p>
+                          )}
+                          {(stats.singleAccountsFromGroups + stats.ungroupedSingles) > 0 && (
+                            <p>
+                              {stats.singleAccountsFromGroups + stats.ungroupedSingles} single-location account{(stats.singleAccountsFromGroups + stats.ungroupedSingles) !== 1 ? "s" : ""}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-navy-600">
+                          {parsedCsv.data.length} account{parsedCsv.data.length !== 1 ? "s" : ""} will be created
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-navy-600">List Name</p>
+                      <p className="font-semibold text-navy-900">{listName}</p>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Grouped preview */}
+              {hasGroupColumn && (() => {
+                const stats = getGroupingStats();
+                if (!stats || stats.multiLocationAccounts === 0) return null;
+                return (
+                  <div className="bg-gold-50 border border-gold-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-gold-800 mb-2">Multi-Location Groups</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {stats.groups.map((g) => (
+                        <div key={g.name} className="bg-white rounded px-3 py-2 border border-gold-100">
+                          <p className="text-sm font-medium text-navy-900 truncate">{g.name}</p>
+                          <p className="text-xs text-navy-500">{g.locationCount} location{g.locationCount !== 1 ? "s" : ""}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="border border-navy-200 rounded-lg overflow-hidden">
                 <div className="overflow-x-auto">
@@ -588,8 +683,11 @@ export default function AccountCsvUpload({
                       Import Successful!
                     </h3>
                     <p className="text-green-700">
-                      {uploadResult.created} account{uploadResult.created !== 1 ? "s" : ""} created from{" "}
-                      <strong>{listName}</strong>
+                      {uploadResult.accountCount ?? uploadResult.created} account{(uploadResult.accountCount ?? uploadResult.created) !== 1 ? "s" : ""}
+                      {uploadResult.locationCount && uploadResult.locationCount !== (uploadResult.accountCount ?? uploadResult.created) ? (
+                        <> with {uploadResult.locationCount} location{uploadResult.locationCount !== 1 ? "s" : ""}</>
+                      ) : null}
+                      {" "}created from <strong>{listName}</strong>
                     </p>
                   </>
                 ) : (
@@ -689,7 +787,11 @@ export default function AccountCsvUpload({
                     </>
                   ) : (
                     <>
-                      Create {parsedCsv?.data.length} Accounts
+                      {(() => {
+                        const stats = getGroupingStats();
+                        if (stats) return `Create ${stats.totalAccounts} Account${stats.totalAccounts !== 1 ? 's' : ''} (${stats.totalLocations} Location${stats.totalLocations !== 1 ? 's' : ''})`;
+                        return `Create ${parsedCsv?.data.length} Accounts`;
+                      })()}
                     </>
                   )}
                 </button>

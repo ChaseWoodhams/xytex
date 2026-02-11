@@ -11,6 +11,7 @@ import {
   Edit,
   Trash2,
 } from "lucide-react";
+import { showToast } from "@/components/shared/toast";
 
 export default function DonorIdListManager() {
   const [donors, setDonors] = useState<DonorIdListItem[]>([]);
@@ -42,7 +43,7 @@ export default function DonorIdListManager() {
 
   const handleAddSingle = async () => {
     if (!newDonorId.trim()) {
-      alert("Please enter a donor ID");
+      showToast("Please enter a donor ID", "error");
       return;
     }
 
@@ -62,13 +63,13 @@ export default function DonorIdListManager() {
       setShowAddForm(false);
       await fetchDonors();
     } catch (error: any) {
-      alert(`Failed to add donor ID: ${error.message}`);
+      showToast(`Failed to add donor ID: ${error.message}`, "error");
     }
   };
 
   const handleBulkImport = async () => {
     if (!bulkImportText.trim()) {
-      alert("Please enter donor IDs");
+      showToast("Please enter donor IDs", "error");
       return;
     }
 
@@ -79,7 +80,7 @@ export default function DonorIdListManager() {
       .filter((id) => id.length > 0);
 
     if (ids.length === 0) {
-      alert("No valid donor IDs found");
+      showToast("No valid donor IDs found", "error");
       return;
     }
 
@@ -98,10 +99,10 @@ export default function DonorIdListManager() {
       const data = await response.json();
       setBulkImportText("");
       setShowBulkImport(false);
-      alert(`Added ${data.added} donor IDs. ${data.skipped} were duplicates.`);
+      showToast(`Added ${data.added} donor IDs. ${data.skipped} were duplicates.`, "success");
       await fetchDonors();
     } catch (error: any) {
-      alert(`Failed to import donor IDs: ${error.message}`);
+      showToast(`Failed to import donor IDs: ${error.message}`, "error");
     }
   };
 
@@ -119,15 +120,11 @@ export default function DonorIdListManager() {
 
       await fetchDonors();
     } catch (error: any) {
-      alert(`Failed to update: ${error.message}`);
+      showToast(`Failed to update: ${error.message}`, "error");
     }
   };
 
   const handleDelete = async (id: string, donorId: string) => {
-    if (!confirm(`Delete donor ID ${donorId}?`)) {
-      return;
-    }
-
     try {
       const response = await fetch(`/api/admin/scraping/donor-ids?id=${id}`, {
         method: "DELETE",

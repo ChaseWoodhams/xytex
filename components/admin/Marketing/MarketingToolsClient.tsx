@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Package, Users, Download } from "lucide-react";
 import CarePackageDashboard from "./CarePackageDashboard";
 import DonorsTab from "./DonorsTab";
@@ -11,33 +11,15 @@ type TabId = "donors" | "care-packages" | "scraping";
 
 export default function MarketingToolsClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabId>("donors");
 
   useEffect(() => {
-    // Read tab from URL search params using window.location (client-side only)
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const tab = params.get("tab") as TabId;
-      if (tab && (tab === "donors" || tab === "care-packages" || tab === "scraping")) {
-        setActiveTab(tab);
-      }
+    const tab = searchParams.get("tab") as TabId;
+    if (tab && (tab === "donors" || tab === "care-packages" || tab === "scraping")) {
+      setActiveTab(tab);
     }
-  }, []); // Empty deps - only run once on mount
-
-  // Listen for URL changes (e.g., browser back/forward)
-  useEffect(() => {
-    const handlePopState = () => {
-      if (typeof window !== 'undefined') {
-        const params = new URLSearchParams(window.location.search);
-        const tab = params.get("tab") as TabId;
-        if (tab && (tab === "donors" || tab === "care-packages" || tab === "scraping")) {
-          setActiveTab(tab);
-        }
-      }
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [searchParams]);
 
   const tabs: Array<{ id: TabId; label: string; icon: typeof Users }> = [
     { id: "donors", label: "Donors", icon: Users },

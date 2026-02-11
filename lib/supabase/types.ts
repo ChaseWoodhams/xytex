@@ -189,7 +189,7 @@ export interface LocationUpload {
   updated_at: string;
 }
 
-export type ContactRole = 'primary' | 'billing' | 'clinical' | 'administrative' | 'other';
+export type ContactRole = 'primary' | 'billing' | 'clinical' | 'administrative' | 'lab_director' | 'nurse_coordinator' | 'clinic_manager' | 'front_desk' | 'other';
 
 export interface LocationContact {
   id: string;

@@ -4,9 +4,10 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Account } from "@/lib/supabase/types";
-import { Search, Building2, Trash2, Edit, X, MapPin, MapPinned, Upload, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Building2, Trash2, Edit, X, MapPin, MapPinned, Upload, ChevronLeft, ChevronRight, Merge, Plus, Minus, Loader2, CheckSquare, Square } from "lucide-react";
 import AccountForm from "./AccountForm";
 import AccountCsvUpload from "./AccountCsvUpload";
+import { showToast } from "@/components/shared/toast";
 
 interface AccountWithMetadata extends Account {
   locationCount: number;
@@ -108,6 +109,14 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [showCsvUpload, setShowCsvUpload] = useState(false);
+  // Bulk merge selection
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
+  const [bulkMerging, setBulkMerging] = useState(false);
+  // Quick action: add to multi
+  const [addToMultiId, setAddToMultiId] = useState<string | null>(null);
+  const [multiAccounts, setMultiAccounts] = useState<Account[]>([]);
+  const [selectedMultiTarget, setSelectedMultiTarget] = useState<string>("");
+  const [quickActionProcessing, setQuickActionProcessing] = useState(false);
   
   // Use a ref to track the latest request to prevent race conditions
   const requestIdRef = useRef(0);
@@ -141,8 +150,6 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
         params.append('sortByStatus', sortByStatus);
       }
 
-      console.log(`[Frontend] Fetching accounts: requestId=${currentRequestId}, filter=${sortByStatus || 'none'}, page=${pageNum}`);
-
       const response = await fetch(`/api/admin/accounts?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch accounts');
@@ -153,19 +160,7 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
       
       // Only update state if this is still the latest request (prevents race conditions)
       if (currentRequestId !== requestIdRef.current) {
-        console.log(`[Frontend] Ignoring stale response: requestId=${currentRequestId}, latest=${requestIdRef.current}`);
         return;
-      }
-      
-      // Debug: Log what we received
-      const statusCounts = {
-        red: accountsData.filter((acc: AccountWithMetadata) => acc.documentStatus === 'red').length,
-        yellow: accountsData.filter((acc: AccountWithMetadata) => acc.documentStatus === 'yellow').length,
-        green: accountsData.filter((acc: AccountWithMetadata) => acc.documentStatus === 'green').length,
-      };
-      console.log(`[Frontend] Received ${accountsData.length} accounts: red=${statusCounts.red}, yellow=${statusCounts.yellow}, green=${statusCounts.green}, filter=${sortByStatus || 'none'}, requestId=${currentRequestId}`);
-      if (accountsData.length > 0) {
-        console.log(`[Frontend] First 3 accounts: ${accountsData.slice(0, 3).map((a: AccountWithMetadata) => `"${a.name}"(${a.documentStatus})`).join(', ')}`);
       }
       
       setAccounts(accountsData);
@@ -226,11 +221,81 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
   // Accounts are already filtered by the API, so use them directly
   const filteredAccounts = accounts;
 
-  const handleDelete = async (accountId: string, accountName: string) => {
-    if (!confirm(`Are you sure you want to delete "${accountName}"? This action cannot be undone.`)) {
+  // Bulk merge handler
+  const handleBulkMerge = async () => {
+    const ids = Array.from(bulkSelected);
+    if (ids.length < 2) {
+      showToast("Select at least 2 single-location accounts to merge", "error");
       return;
     }
+    if (!confirm(`Merge ${ids.length} selected accounts into one multi-location account? The first selected account becomes the primary.`)) return;
+    setBulkMerging(true);
+    try {
+      const response = await fetch("/api/admin/data-tools/merge-accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountIds: ids }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Merge failed");
+      }
+      const result = await response.json();
+      showToast(`Merged ${ids.length} accounts into "${result.mergedAccountName}" with ${result.locationCount} locations`, "success");
+      setBulkSelected(new Set());
+      fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, accountTypeFilter, documentStatusSort);
+    } catch (error: any) {
+      showToast(`Merge failed: ${error.message}`, "error");
+    } finally {
+      setBulkMerging(false);
+    }
+  };
 
+  // Quick action: Add single to multi
+  const handleQuickAddToMulti = async () => {
+    if (!addToMultiId || !selectedMultiTarget) return;
+    setQuickActionProcessing(true);
+    try {
+      // Get the location ID for this single-location account
+      const searchResp = await fetch(`/api/admin/data-tools/search-single-locations?q=${encodeURIComponent(accounts.find(a => a.id === addToMultiId)?.name || "")}`);
+      const searchData = await searchResp.json();
+      const loc = (searchData.locations || []).find((l: any) => l.account_id === addToMultiId);
+      if (!loc) throw new Error("Could not find location for this account");
+
+      const response = await fetch("/api/admin/data-tools/add-location-to-multi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locationId: loc.id, targetAccountId: selectedMultiTarget }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Failed");
+      }
+      showToast("Location moved to multi-location account", "success");
+      setAddToMultiId(null);
+      setSelectedMultiTarget("");
+      fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, accountTypeFilter, documentStatusSort);
+    } catch (error: any) {
+      showToast(`Failed: ${error.message}`, "error");
+    } finally {
+      setQuickActionProcessing(false);
+    }
+  };
+
+  // Load multi-location accounts for quick action modal
+  const loadMultiAccounts = async () => {
+    try {
+      const response = await fetch("/api/admin/data-tools/multi-location-accounts");
+      if (response.ok) {
+        const data = await response.json();
+        setMultiAccounts(data.accounts || []);
+      }
+    } catch (err) {
+      console.error("Failed to load multi-location accounts", err);
+    }
+  };
+
+  const handleDelete = async (accountId: string, accountName: string) => {
     setDeletingId(accountId);
     try {
       const response = await fetch(`/api/admin/accounts/${accountId}`, {
@@ -242,11 +307,12 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
         throw new Error(error.error || 'Failed to delete account');
       }
 
+      showToast(`Account "${accountName}" was deleted.`, "success");
       // Refresh the current page
       fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, accountTypeFilter, documentStatusSort);
     } catch (error: any) {
       console.error('Error deleting account:', error);
-      alert(`Failed to delete account: ${error.message}`);
+      showToast(`Failed to delete account: ${error.message}`, "error");
     } finally {
       setDeletingId(null);
     }
@@ -374,10 +440,38 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
         </div>
       ) : !loading ? (
         <>
+          {/* Bulk Merge Toolbar */}
+          {bulkSelected.size > 0 && (
+            <div className="mb-4 p-3 bg-gold-50 border border-gold-200 rounded-lg flex items-center justify-between">
+              <p className="text-sm font-medium text-gold-800">
+                {bulkSelected.size} account{bulkSelected.size !== 1 ? "s" : ""} selected for merge
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setBulkSelected(new Set())}
+                  className="btn btn-outline text-sm py-1"
+                >
+                  Clear Selection
+                </button>
+                <button
+                  onClick={handleBulkMerge}
+                  disabled={bulkSelected.size < 2 || bulkMerging}
+                  className="btn btn-primary text-sm py-1 flex items-center gap-2"
+                >
+                  {bulkMerging ? <Loader2 className="w-4 h-4 animate-spin" /> : <Merge className="w-4 h-4" />}
+                  Merge {bulkSelected.size} Accounts
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="table-container">
             <table className="w-full min-w-[1200px]">
               <thead>
                 <tr className="border-b border-navy-200">
+                  <th className="py-3 px-2 w-8">
+                    <span className="sr-only">Select</span>
+                  </th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-navy-700">
                     Account Name
                   </th>
@@ -433,8 +527,33 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
                   return (
                     <tr
                       key={account.id}
-                      className="border-b border-navy-100 hover:bg-cream-50"
+                      className={`border-b border-navy-100 hover:bg-cream-50 ${bulkSelected.has(account.id) ? "bg-gold-50" : ""}`}
                     >
+                      {/* Bulk Select Checkbox */}
+                      <td className="py-3 px-2">
+                        {account.account_type === "single_location" || (!account.account_type && account.locationCount <= 1) ? (
+                          <button
+                            onClick={() => {
+                              setBulkSelected(prev => {
+                                const next = new Set(prev);
+                                if (next.has(account.id)) next.delete(account.id);
+                                else next.add(account.id);
+                                return next;
+                              });
+                            }}
+                            className="text-navy-400 hover:text-gold-600"
+                            title="Select for bulk merge"
+                          >
+                            {bulkSelected.has(account.id) ? (
+                              <CheckSquare className="w-4 h-4 text-gold-600" />
+                            ) : (
+                              <Square className="w-4 h-4" />
+                            )}
+                          </button>
+                        ) : (
+                          <span className="w-4 h-4 block" />
+                        )}
+                      </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           {/* Document Status Indicator */}
@@ -521,7 +640,7 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
                         {account.primary_contact_name || account.primary_contact_email || "—"}
                       </td>
                       <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <Link
                             href={`/admin/accounts/${account.id}`}
                             className="text-gold-600 hover:text-gold-700 font-medium text-sm"
@@ -535,6 +654,19 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
                           >
                             <Edit className="w-4 h-4" />
                           </button>
+                          {/* Quick action: Add single to multi */}
+                          {(account.account_type === "single_location" || (!account.account_type && account.locationCount <= 1)) && (
+                            <button
+                              onClick={() => {
+                                setAddToMultiId(account.id);
+                                loadMultiAccounts();
+                              }}
+                              className="p-1.5 text-navy-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              title="Add to multi-location account"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDelete(account.id, account.name)}
                             disabled={deletingId === account.id}
@@ -647,6 +779,56 @@ export default function AccountsList({ initialAccounts }: AccountsListProps) {
             fetchAccounts(page, searchQuery || undefined, countryFilter !== 'ALL' ? countryFilter : undefined, accountTypeFilter, documentStatusSort);
           }}
         />
+      )}
+
+      {/* Quick Action: Add to Multi-Location Modal */}
+      {addToMultiId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="px-6 py-4 border-b border-navy-200 flex items-center justify-between">
+              <h3 className="text-lg font-heading font-semibold text-navy-900">
+                Add to Multi-Location Account
+              </h3>
+              <button
+                onClick={() => { setAddToMultiId(null); setSelectedMultiTarget(""); }}
+                className="p-1 hover:bg-navy-100 rounded"
+              >
+                <X className="w-5 h-5 text-navy-600" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-navy-600">
+                Move <strong>{accounts.find(a => a.id === addToMultiId)?.name}</strong> into an existing multi-location account. The single-location account will be deleted and its location added to the target.
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-navy-700 mb-2">Target Multi-Location Account</label>
+                <select
+                  value={selectedMultiTarget}
+                  onChange={(e) => setSelectedMultiTarget(e.target.value)}
+                  className="w-full px-4 py-2 border border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
+                >
+                  <option value="">Choose an account...</option>
+                  {multiAccounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>{acc.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-navy-100 bg-cream-50 flex justify-end gap-3">
+              <button onClick={() => { setAddToMultiId(null); setSelectedMultiTarget(""); }} className="btn btn-outline">
+                Cancel
+              </button>
+              <button
+                onClick={handleQuickAddToMulti}
+                disabled={!selectedMultiTarget || quickActionProcessing}
+                className="btn btn-primary flex items-center gap-2"
+              >
+                {quickActionProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                Add to Account
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

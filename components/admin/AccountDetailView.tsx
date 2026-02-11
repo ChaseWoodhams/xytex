@@ -11,6 +11,7 @@ import type {
   Note,
 } from "@/lib/supabase/types";
 import { ArrowLeft, Building2, MapPin, FileText, Clock, StickyNote, Plus, Phone, Mail, Trash2, Edit, X, Shield, Upload, Download, Eye } from "lucide-react";
+import { showToast } from "@/components/shared/toast";
 import AccountForm from "./AccountForm";
 import LocationsList from "./LocationsList";
 import AgreementsList from "./AgreementsList";
@@ -103,7 +104,7 @@ export default function AccountDetailView({
       router.refresh();
     } catch (error: any) {
       console.error('Error updating pending contract status:', error);
-      alert(`Failed to update pending contract status: ${error.message}`);
+      showToast(`Failed to update pending contract status: ${error.message}`, "error");
     } finally {
       setIsUpdatingPendingContract(false);
     }
@@ -126,7 +127,7 @@ export default function AccountDetailView({
       router.refresh();
     } catch (error: any) {
       console.error('Error deleting account:', error);
-      alert(`Failed to delete account: ${error.message}`);
+      showToast(`Failed to delete account: ${error.message}`, "error");
       setIsDeleting(false);
     }
   };
@@ -260,13 +261,22 @@ export default function AccountDetailView({
 
   return (
     <div className="p-8">
-      <Link
-        href="/admin/accounts"
-        className="inline-flex items-center gap-2 text-navy-600 hover:text-navy-900 mb-6"
+      <nav
+        aria-label="Breadcrumb"
+        className="mb-4 text-sm text-navy-600 flex items-center gap-2 flex-wrap"
       >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Accounts
-      </Link>
+        <Link href="/admin/clinic-tools" className="hover:text-navy-900">
+          Clinic Tools
+        </Link>
+        <span className="text-navy-400">/</span>
+        <Link href="/admin/accounts" className="hover:text-navy-900">
+          Accounts
+        </Link>
+        <span className="text-navy-400">/</span>
+        <span className="text-navy-900 font-medium truncate max-w-xs md:max-w-sm">
+          {account.name}
+        </span>
+      </nav>
 
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
@@ -799,7 +809,7 @@ export default function AccountDetailView({
             )}
 
 
-            {/* Notes - Combined at the bottom */}
+            {/* Account Notes - Unified display */}
             {(account.notes || account.udf_notes) && (
               <div className="bg-white rounded-xl shadow-md p-6">
                 <div className="flex items-center gap-3 mb-4">
@@ -807,21 +817,18 @@ export default function AccountDetailView({
                     <StickyNote className="w-6 h-6 text-navy-600" />
                   </div>
                   <h2 className="text-xl font-heading font-semibold text-navy-900">
-                    Notes
+                    Account Notes
                   </h2>
                 </div>
-                <div className="space-y-4">
-                  {account.notes && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-navy-700 mb-2">Account Notes</h3>
-                      <p className="text-navy-700 whitespace-pre-wrap">{account.notes}</p>
-                    </div>
+                <div className="text-navy-700 whitespace-pre-wrap space-y-4">
+                  {account.notes && <p>{account.notes}</p>}
+                  {account.udf_notes && account.notes && (
+                    <div className="border-t border-navy-200 pt-4" />
                   )}
                   {account.udf_notes && (
                     <div>
-                      {account.notes && <div className="border-t border-navy-200 pt-4 mt-4" />}
-                      <h3 className="text-sm font-semibold text-navy-700 mb-2">Additional Notes</h3>
-                      <p className="text-navy-700 whitespace-pre-wrap">{account.udf_notes}</p>
+                      <span className="text-xs bg-navy-100 text-navy-500 px-1.5 py-0.5 rounded mr-2">From Import</span>
+                      <p className="mt-1">{account.udf_notes}</p>
                     </div>
                   )}
                 </div>
@@ -976,12 +983,13 @@ export default function AccountDetailView({
           )
         )}
 
-        {/* Notes tab - only for single-location accounts */}
-        {activeTab === "notes" && (!isMultiLocation || locations.length <= 1) && (
+        {/* Notes tab - for all account types */}
+        {activeTab === "notes" && (
           <NotesSection
             accountId={account.id}
             notes={notes}
             currentUserId={currentUserId}
+            locations={isMultiLocation ? locations : []}
           />
         )}
       </div>

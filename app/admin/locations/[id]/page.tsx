@@ -1,9 +1,11 @@
 import { getLocationById, getLocationsByAccount } from "@/lib/supabase/locations";
 import { getAccountById } from "@/lib/supabase/accounts";
 import { getAgreementsByLocation } from "@/lib/supabase/agreements";
+import { getNotesByLocation } from "@/lib/supabase/notes";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import LocationDetailView from "@/components/admin/LocationDetailView";
+import type { Note } from "@/lib/supabase/types";
 
 export default async function LocationDetailPage({
   params,
@@ -38,13 +40,22 @@ export default async function LocationDetailPage({
   // Get agreements for this location (only if multi-location account)
   const agreements = isMultiLocation ? await getAgreementsByLocation(id) : [];
 
+  // Get notes for this location
+  let notes: Note[] = [];
+  try {
+    notes = await getNotesByLocation(id, user.id);
+  } catch (error) {
+    console.error('Error fetching location notes:', error);
+  }
+
   return (
     <LocationDetailView
       location={location}
       account={account}
       agreements={agreements}
       isMultiLocation={isMultiLocation}
+      notes={notes}
+      currentUserId={user.id}
     />
   );
 }
-

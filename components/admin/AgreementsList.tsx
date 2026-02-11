@@ -131,8 +131,7 @@ export default function AgreementsList({ accountId, locationId, agreements }: Ag
         throw new Error(errorMessage);
       }
 
-      const responseData = await metadataResponse.json();
-      console.log('Agreement metadata recorded:', responseData);
+      await metadataResponse.json();
 
       // Clear the file input and modal state
       if (fileInputRef.current) {

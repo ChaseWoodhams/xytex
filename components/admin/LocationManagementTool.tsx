@@ -33,6 +33,10 @@ export default function LocationManagementTool() {
   const [selectedLocation2, setSelectedLocation2] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  // Richer filters
+  const [filterState, setFilterState] = useState("");
+  const [filterCity, setFilterCity] = useState("");
+  const [filterAccountType, setFilterAccountType] = useState<"all" | "single_location" | "multi_location">("all");
 
   const searchSingleLocations = async () => {
     if (!searchQuery.trim()) {
@@ -331,7 +335,7 @@ export default function LocationManagementTool() {
 
       <div className="p-6">
         {/* Search Section */}
-        <div className="mb-6">
+        <div className="mb-6 space-y-3">
           <div className="flex gap-3">
             <input
               type="text"
@@ -362,6 +366,50 @@ export default function LocationManagementTool() {
                 </>
               )}
             </button>
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="flex-1 min-w-[120px] max-w-[180px]">
+              <label className="block text-xs font-medium text-navy-600 mb-1">State</label>
+              <input
+                type="text"
+                value={filterState}
+                onChange={(e) => setFilterState(e.target.value)}
+                placeholder="e.g. TX, CA"
+                className="w-full px-3 py-1.5 text-sm border border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
+              />
+            </div>
+            <div className="flex-1 min-w-[120px] max-w-[180px]">
+              <label className="block text-xs font-medium text-navy-600 mb-1">City</label>
+              <input
+                type="text"
+                value={filterCity}
+                onChange={(e) => setFilterCity(e.target.value)}
+                placeholder="e.g. Dallas"
+                className="w-full px-3 py-1.5 text-sm border border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
+              />
+            </div>
+            <div className="flex-1 min-w-[140px] max-w-[200px]">
+              <label className="block text-xs font-medium text-navy-600 mb-1">Account Type</label>
+              <select
+                value={filterAccountType}
+                onChange={(e) => setFilterAccountType(e.target.value as "all" | "single_location" | "multi_location")}
+                className="w-full px-3 py-1.5 text-sm border border-navy-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
+              >
+                <option value="all">All</option>
+                <option value="single_location">Single Location</option>
+                <option value="multi_location">Multi-Location</option>
+              </select>
+            </div>
+            {(filterState || filterCity || filterAccountType !== "all") && (
+              <button
+                onClick={() => { setFilterState(""); setFilterCity(""); setFilterAccountType("all"); }}
+                className="text-xs text-navy-500 hover:text-navy-700 underline pb-1"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
         </div>
 
@@ -396,7 +444,13 @@ export default function LocationManagementTool() {
         )}
 
         {/* Add to Multi-Location Tab */}
-        {activeTab === "add" && (
+        {activeTab === "add" && (() => {
+          const filtered = locations
+            .filter(loc => loc.account_type === "single_location")
+            .filter(loc => !filterState || (loc.state || "").toLowerCase().includes(filterState.toLowerCase()))
+            .filter(loc => !filterCity || (loc.city || "").toLowerCase().includes(filterCity.toLowerCase()))
+            .filter(loc => filterAccountType === "all" || loc.account_type === filterAccountType);
+          return (
           <div className="space-y-4">
             <div className="bg-cream-50 p-4 rounded-lg">
               <h3 className="font-semibold text-navy-900 mb-2">
@@ -407,12 +461,11 @@ export default function LocationManagementTool() {
               </p>
             </div>
 
-            {locations.length > 0 && (
+            {filtered.length > 0 && (
               <div className="space-y-2">
-                <h4 className="font-medium text-navy-900">Select Location:</h4>
+                <h4 className="font-medium text-navy-900">Select Location: <span className="text-sm font-normal text-navy-500">({filtered.length} result{filtered.length !== 1 ? "s" : ""})</span></h4>
                 <div className="max-h-64 overflow-y-auto border border-navy-200 rounded-lg">
-                  {locations
-                    .filter(loc => loc.account_type === "single_location")
+                  {filtered
                     .map((location) => (
                       <div
                         key={location.id}
@@ -488,10 +541,17 @@ export default function LocationManagementTool() {
               </button>
             )}
           </div>
-        )}
+          );
+        })()}
 
         {/* Remove from Multi-Location Tab */}
-        {activeTab === "remove" && (
+        {activeTab === "remove" && (() => {
+          const filtered = locations
+            .filter(loc => loc.account_type === "multi_location")
+            .filter(loc => !filterState || (loc.state || "").toLowerCase().includes(filterState.toLowerCase()))
+            .filter(loc => !filterCity || (loc.city || "").toLowerCase().includes(filterCity.toLowerCase()))
+            .filter(loc => filterAccountType === "all" || loc.account_type === filterAccountType);
+          return (
           <div className="space-y-4">
             <div className="bg-cream-50 p-4 rounded-lg">
               <h3 className="font-semibold text-navy-900 mb-2">
@@ -502,12 +562,11 @@ export default function LocationManagementTool() {
               </p>
             </div>
 
-            {locations.length > 0 && (
+            {filtered.length > 0 && (
               <div className="space-y-2">
-                <h4 className="font-medium text-navy-900">Select Location to Remove:</h4>
+                <h4 className="font-medium text-navy-900">Select Location to Remove: <span className="text-sm font-normal text-navy-500">({filtered.length} result{filtered.length !== 1 ? "s" : ""})</span></h4>
                 <div className="max-h-64 overflow-y-auto border border-navy-200 rounded-lg">
-                  {locations
-                    .filter(loc => loc.account_type === "multi_location")
+                  {filtered
                     .map((location) => (
                       <div
                         key={location.id}
@@ -565,10 +624,16 @@ export default function LocationManagementTool() {
               </button>
             )}
           </div>
-        )}
+          );
+        })()}
 
         {/* Merge Locations Tab */}
-        {activeTab === "merge" && (
+        {activeTab === "merge" && (() => {
+          const filtered = locations
+            .filter(loc => !filterState || (loc.state || "").toLowerCase().includes(filterState.toLowerCase()))
+            .filter(loc => !filterCity || (loc.city || "").toLowerCase().includes(filterCity.toLowerCase()))
+            .filter(loc => filterAccountType === "all" || loc.account_type === filterAccountType);
+          return (
           <div className="space-y-4">
             <div className="bg-cream-50 p-4 rounded-lg">
               <h3 className="font-semibold text-navy-900 mb-2">
@@ -579,12 +644,12 @@ export default function LocationManagementTool() {
               </p>
             </div>
 
-            {locations.length > 0 && (
+            {filtered.length > 0 && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <h4 className="font-medium text-navy-900">Source Location (to merge from):</h4>
+                  <h4 className="font-medium text-navy-900">Source Location (to merge from): <span className="text-sm font-normal text-navy-500">({filtered.length})</span></h4>
                   <div className="max-h-64 overflow-y-auto border border-navy-200 rounded-lg">
-                    {locations.map((location) => (
+                    {filtered.map((location) => (
                       <div
                         key={location.id}
                         onClick={() => setSelectedLocation1(location.id)}
@@ -616,7 +681,7 @@ export default function LocationManagementTool() {
                 <div className="space-y-2">
                   <h4 className="font-medium text-navy-900">Target Location (to merge into):</h4>
                   <div className="max-h-64 overflow-y-auto border border-navy-200 rounded-lg">
-                    {locations
+                    {filtered
                       .filter(loc => loc.id !== selectedLocation1)
                       .map((location) => (
                         <div
@@ -669,7 +734,8 @@ export default function LocationManagementTool() {
               </button>
             )}
           </div>
-        )}
+          );
+        })()}
 
         {locations.length === 0 && !searching && searchQuery && (
           <div className="text-center py-12">
